@@ -1,0 +1,24 @@
+﻿@inherits LayoutComponentBase
+
+<div class="flex">
+    <!-- Sidebar -->
+    <div class="w-64 bg-gray-800 text-white min-h-screen p-6 fixed h-full">
+        <h2 class="text-2xl font-bold mb-8">💼 Accounting</h2>
+        
+        <nav class="space-y-4">
+            <a href="/dashboard" class="block px-4 py-2 rounded hover:bg-gray-700">📊 Dashboard</a>
+            <a href="/customers" class="block px-4 py-2 rounded hover:bg-gray-700">👥 Customers</a>
+            <a href="/suppliers" class="block px-4 py-2 rounded hover:bg-gray-700">🏢 Suppliers</a>
+            <a href="/income" class="block px-4 py-2 rounded hover:bg-gray-700">💰 Income</a>
+            <a href="/expense" class="block px-4 py-2 rounded hover:bg-gray-700">💸 Expense</a>
+            <a href="/reports" class="block px-4 py-2 rounded hover:bg-gray-700">📈 Reports</a>
+            <hr class="my-4 border-gray-600" />
+            <a href="/login" class="block px-4 py-2 rounded hover:bg-gray-700">🚪 Logout</a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 ml-64 p-8 bg-gray-100 min-h-screen">
+        @Body
+    </div>
+</div>

@@ -1,0 +1,149 @@
+@page "/suppliers"
+@rendermode InteractiveServer
+@using AccountingApp.Services
+@using AccountingApp.Models
+@inject ISupplierService SupplierService
+@inject IJSRuntime JSRuntime
+
+<div class="p-8 bg-gray-100 min-h-screen">
+    <div class="mb-8 flex justify-between items-center">
+        <h1 class="text-4xl font-bold text-gray-800">🏢 Suppliers</h1>
+        <button @onclick="ShowAddForm" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg">
+            ➕ Add Supplier
+        </button>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    @if (showForm)
+    {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-semibold">@(isEditing ? "Edit Supplier" : "Add New Supplier")</h2>
+                    <button @onclick="CancelForm" class="text-gray-500 hover:text-gray-700 text-xl">✖</button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <input type="text" @bind="newSupplier.SupplierName" placeholder="Supplier Name" class="col-span-2 px-4 py-2 border rounded-lg">
+                    <input type="tel" @bind="newSupplier.Contact" placeholder="Contact Number" class="px-4 py-2 border rounded-lg">
+                    <input type="email" @bind="newSupplier.Email" placeholder="Email" class="px-4 py-2 border rounded-lg">
+                    <input type="number" @bind="newSupplier.OpeningBalance" placeholder="Opening Balance" class="col-span-2 px-4 py-2 border rounded-lg">
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <button @onclick="CancelForm" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg">
+                        Cancel
+                    </button>
+                    <button @onclick="SaveSupplier" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg">
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Suppliers Table -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="px-6 py-3 text-left font-semibold">Supplier Name</th>
+                    <th class="px-6 py-3 text-left font-semibold">Contact</th>
+                    <th class="px-6 py-3 text-left font-semibold">Email</th>
+                    <th class="px-6 py-3 text-left font-semibold">Balance</th>
+                    <th class="px-6 py-3 text-left font-semibold">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var supplier in suppliers)
+                {
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-6 py-4 font-semibold">@supplier.SupplierName</td>
+                        <td class="px-6 py-4">@supplier.Contact</td>
+                        <td class="px-6 py-4">@supplier.Email</td>
+                        <td class="px-6 py-4 font-semibold text-blue-600">@supplier.OpeningBalance.ToString("C")</td>
+                        <td class="px-6 py-4">
+                            <button @onclick="() => EditSupplier(supplier)" class="bg-blue-500 text-white px-3 py-1 rounded mr-2">✏️ Edit</button>
+                            <button @onclick="() => DeleteSupplier(supplier.Id)" class="bg-red-500 text-white px-3 py-1 rounded">🗑️ Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private List<Supplier> suppliers = new();
+    private Supplier newSupplier = new();
+    private bool showForm = false;
+    private bool isEditing = false;
+    private int currentUserId = 1; // Mock user ID
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSuppliers();
+    }
+
+    private async Task LoadSuppliers()
+    {
+        suppliers = await SupplierService.GetAllAsync(currentUserId);
+    }
+
+    private void ShowAddForm()
+    {
+        newSupplier = new Supplier { UserId = currentUserId };
+        isEditing = false;
+        showForm = true;
+    }
+
+    private void EditSupplier(Supplier supplier)
+    {
+        newSupplier = new Supplier 
+        { 
+            Id = supplier.Id,
+            SupplierName = supplier.SupplierName,
+            Contact = supplier.Contact,
+            Email = supplier.Email,
+            OpeningBalance = supplier.OpeningBalance,
+            UserId = supplier.UserId
+        };
+        isEditing = true;
+        showForm = true;
+    }
+
+    private async Task SaveSupplier()
+    {
+        if (string.IsNullOrEmpty(newSupplier.SupplierName))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Supplier name required hai");
+            return;
+        }
+
+        if (isEditing)
+        {
+            await SupplierService.UpdateAsync(newSupplier);
+        }
+        else
+        {
+            await SupplierService.AddAsync(newSupplier);
+        }
+        await LoadSuppliers();
+        CancelForm();
+    }
+
+    private async Task DeleteSupplier(int id)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Delete karein?"))
+        {
+            await SupplierService.DeleteAsync(id);
+            await LoadSuppliers();
+        }
+    }
+
+    private void CancelForm()
+    {
+        showForm = false;
+        newSupplier = new();
+    }
+}

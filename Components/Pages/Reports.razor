@@ -1,0 +1,153 @@
+@page "/reports"
+@using AccountingApp.Services
+@using AccountingApp.Models
+@inject IReportService ReportService
+@inject IIncomeService IncomeService
+@inject IExpenseService ExpenseService
+
+<div class="p-8 bg-gray-100 min-h-screen">
+    <h1 class="text-4xl font-bold text-gray-800 mb-8">📈 Reports</h1>
+
+    <!-- Report Selection -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <button @onclick='() => ShowReport("pnl")' 
+                class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-lg text-lg">
+            💹 Profit & Loss
+        </button>
+        <button @onclick='() => ShowReport("income")' 
+                class="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-lg text-lg">
+            💰 Income Report
+        </button>
+        <button @onclick='() => ShowReport("expense")' 
+                class="bg-red-500 hover:bg-red-600 text-white font-bold py-4 px-6 rounded-lg text-lg">
+            💸 Expense Report
+        </button>
+    </div>
+
+    <!-- Profit & Loss Report -->
+    @if (currentReport == "pnl")
+    {
+        <div class="bg-white rounded-lg shadow-md p-8">
+            <h2 class="text-3xl font-bold mb-6">📊 Profit & Loss Report</h2>
+            
+            <div class="grid grid-cols-3 gap-6 mb-8">
+                <div class="bg-green-50 border-2 border-green-200 rounded-lg p-6">
+                    <p class="text-gray-600 text-sm">💰 Total Income</p>
+                    <p class="text-4xl font-bold text-green-600">@totalIncome.ToString("C")</p>
+                </div>
+                
+                <div class="bg-red-50 border-2 border-red-200 rounded-lg p-6">
+                    <p class="text-gray-600 text-sm">💸 Total Expense</p>
+                    <p class="text-4xl font-bold text-red-600">@totalExpense.ToString("C")</p>
+                </div>
+                
+                <div class="@(profitLoss >= 0 ? "bg-blue-50 border-2 border-blue-200" : "bg-orange-50 border-2 border-orange-200") rounded-lg p-6">
+                    <p class="text-gray-600 text-sm">📈 Net Profit/Loss</p>
+                    <p class="text-4xl font-bold @(profitLoss >= 0 ? "text-blue-600" : "text-orange-600")">@profitLoss.ToString("C")</p>
+                </div>
+            </div>
+
+            <div class="text-center text-gray-500 text-sm">
+                Report Generated: @DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+            </div>
+        </div>
+    }
+
+    <!-- Income Report -->
+    @if (currentReport == "income")
+    {
+        <div class="bg-white rounded-lg shadow-md p-8">
+            <h2 class="text-3xl font-bold mb-6">💰 Income Report</h2>
+            
+            <div class="mb-6">
+                <label class="block text-gray-700 font-semibold mb-2">Select Date:</label>
+                <input type="date" @bind="selectedDate" class="px-4 py-2 border rounded-lg">
+                <button @onclick="LoadDailyIncomeReport" class="ml-2 bg-blue-500 text-white px-4 py-2 rounded-lg">🔍 Search</button>
+            </div>
+
+            <table class="w-full border-collapse">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="border px-4 py-2 text-left">Date</th>
+                        <th class="border px-4 py-2 text-left">Customer</th>
+                        <th class="border px-4 py-2 text-left">Amount</th>
+                        <th class="border px-4 py-2 text-left">Payment Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var income in dailyIncomes)
+                    {
+                        <tr class="hover:bg-gray-50">
+                            <td class="border px-4 py-2">@income.Date?.ToString("yyyy-MM-dd")</td>
+                            <td class="border px-4 py-2">@income.Customer?.Name</td>
+                            <td class="border px-4 py-2 font-semibold text-green-600">@income.Amount.ToString("C")</td>
+                            <td class="border px-4 py-2">@income.PaymentType</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            
+            <div class="mt-4 text-lg font-bold">
+                Daily Total: <span class="text-green-600">@dailyIncomes.Sum(i => i.Amount).ToString("C")</span>
+            </div>
+        </div>
+    }
+
+    <!-- Expense Report -->
+    @if (currentReport == "expense")
+    {
+        <div class="bg-white rounded-lg shadow-md p-8">
+            <h2 class="text-3xl font-bold mb-6">💸 Expense Report</h2>
+            
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+                @foreach (var exp in expenseByCategory)
+                {
+                    <div class="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+                        <p class="text-gray-600 font-semibold">@exp.Key</p>
+                        <p class="text-2xl font-bold text-red-600">@exp.Value.ToString("C")</p>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string currentReport = "";
+    private decimal totalIncome = 0;
+    private decimal totalExpense = 0;
+    private decimal profitLoss = 0;
+    private DateTime selectedDate = DateTime.Now;
+    private List<Income> dailyIncomes = new();
+    private Dictionary<string, decimal> expenseByCategory = new();
+    private int currentUserId = 1;
+
+    private void ShowReport(string reportType)
+    {
+        currentReport = reportType;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfitLossData();
+        await LoadDailyIncomeReport();
+        await LoadExpenseReport();
+    }
+
+    private async Task LoadProfitLossData()
+    {
+        totalIncome = await IncomeService.GetTotalIncomeAsync(currentUserId);
+        totalExpense = await ExpenseService.GetTotalExpenseAsync(currentUserId);
+        profitLoss = await ReportService.GetProfitLossAsync(currentUserId);
+    }
+
+    private async Task LoadDailyIncomeReport()
+    {
+        dailyIncomes = await ReportService.GetDailyIncomeReportAsync(currentUserId, selectedDate);
+    }
+
+    private async Task LoadExpenseReport()
+    {
+        expenseByCategory = await ExpenseService.GetExpenseByCategory(currentUserId);
+    }
+}

@@ -1,0 +1,160 @@
+@page "/expense"
+@rendermode InteractiveServer
+@using AccountingApp.Services
+@using AccountingApp.Models
+@inject IExpenseService ExpenseService
+@inject IJSRuntime JSRuntime
+
+<div class="p-8 bg-gray-100 min-h-screen">
+    <div class="mb-8 flex justify-between items-center">
+        <h1 class="text-4xl font-bold text-gray-800">💸 Expenses</h1>
+        <button @onclick="ShowAddForm" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg">
+            ➕ Add Expense
+        </button>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    @if (showForm)
+    {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-semibold">@(isEditing ? "Edit Expense" : "Add New Expense")</h2>
+                    <button @onclick="CancelForm" class="text-gray-500 hover:text-gray-700 text-xl">✖</button>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <input type="date" @bind="newExpense.Date" class="col-span-2 px-4 py-2 border rounded-lg">
+                    
+                    <select @bind="newExpense.Category" class="px-4 py-2 border rounded-lg">
+                        <option value="">Select Category</option>
+                        <option value="Rent">🏠 Rent</option>
+                        <option value="Salary">👨‍💼 Salary</option>
+                        <option value="Bills">📄 Bills</option>
+                        <option value="Utilities">💡 Utilities</option>
+                        <option value="Transport">🚗 Transport</option>
+                        <option value="Other">📌 Other</option>
+                    </select>
+
+                    <input type="number" @bind="newExpense.Amount" placeholder="Amount" class="px-4 py-2 border rounded-lg" step="0.01">
+
+                    <textarea @bind="newExpense.Description" placeholder="Description" class="col-span-2 px-4 py-2 border rounded-lg" rows="3"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <button @onclick="CancelForm" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg">
+                        Cancel
+                    </button>
+                    <button @onclick="SaveExpense" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg">
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Expense Table -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="px-6 py-3 text-left font-semibold">Date</th>
+                    <th class="px-6 py-3 text-left font-semibold">Category</th>
+                    <th class="px-6 py-3 text-left font-semibold">Amount</th>
+                    <th class="px-6 py-3 text-left font-semibold">Description</th>
+                    <th class="px-6 py-3 text-left font-semibold">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var expense in expenses)
+                {
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-6 py-4">@expense.Date.ToString("yyyy-MM-dd")</td>
+                        <td class="px-6 py-4">@expense.Category</td>
+                        <td class="px-6 py-4 font-semibold text-red-600">@expense.Amount.ToString("C")</td>
+                        <td class="px-6 py-4">@expense.Description</td>
+                        <td class="px-6 py-4">
+                            <button @onclick="() => EditExpense(expense)" class="bg-blue-500 text-white px-3 py-1 rounded mr-2">✏️</button>
+                            <button @onclick="() => DeleteExpense(expense.Id)" class="bg-red-500 text-white px-3 py-1 rounded">🗑️</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private List<Expense> expenses = new();
+    private Expense newExpense = new();
+    private bool showForm = false;
+    private bool isEditing = false;
+    private int currentUserId = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExpenses();
+    }
+
+    private async Task LoadExpenses()
+    {
+        expenses = await ExpenseService.GetAllAsync(currentUserId);
+    }
+
+    private void ShowAddForm()
+    {
+        newExpense = new Expense { UserId = currentUserId, Date = DateTime.Now };
+        isEditing = false;
+        showForm = true;
+    }
+
+    private void EditExpense(Expense expense)
+    {
+        newExpense = new Expense
+        {
+            Id = expense.Id,
+            Date = expense.Date,
+            Category = expense.Category,
+            Amount = expense.Amount,
+            Description = expense.Description,
+            UserId = expense.UserId
+        };
+        isEditing = true;
+        showForm = true;
+    }
+
+    private async Task SaveExpense()
+    {
+        if (string.IsNullOrEmpty(newExpense.Category))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Category select karein");
+            return;
+        }
+
+        if (isEditing)
+        {
+            await ExpenseService.UpdateAsync(newExpense);
+        }
+        else
+        {
+            await ExpenseService.AddAsync(newExpense);
+        }
+        await LoadExpenses();
+        CancelForm();
+    }
+
+    private async Task DeleteExpense(int id)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Delete karein?"))
+        {
+            await ExpenseService.DeleteAsync(id);
+            await LoadExpenses();
+        }
+    }
+
+    private void CancelForm()
+    {
+        showForm = false;
+        newExpense = new();
+    }
+}

@@ -1,0 +1,143 @@
+@page "/customers"
+@rendermode InteractiveServer
+@using AccountingApp.Services
+@using AccountingApp.Models
+@inject ICustomerService CustomerService
+@inject IJSRuntime JSRuntime
+
+<div class="p-8 bg-gray-100 min-h-screen">
+    <div class="mb-8 flex justify-between items-center">
+        <h1 class="text-4xl font-bold text-gray-800">👥 Customers</h1>
+        <button @onclick="ShowAddForm" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg">
+            ➕ Add Customer
+        </button>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    @if (showForm)
+    {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-semibold">@(isEditing ? "Edit Customer" : "Add New Customer")</h2>
+                    <button @onclick="CancelForm" class="text-gray-500 hover:text-gray-700 text-xl">✖</button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <input type="text" @bind="newCustomer.Name" placeholder="Name" class="col-span-2 px-4 py-2 border rounded-lg">
+                    <input type="tel" @bind="newCustomer.Phone" placeholder="Phone" class="px-4 py-2 border rounded-lg">
+                    <input type="email" @bind="newCustomer.Email" placeholder="Email" class="px-4 py-2 border rounded-lg">
+                    <input type="number" @bind="newCustomer.OpeningBalance" placeholder="Opening Balance" class="col-span-2 px-4 py-2 border rounded-lg">
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <button @onclick="CancelForm" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg">
+                        Cancel
+                    </button>
+                    <button @onclick="SaveCustomer" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg">
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Customers Table -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="px-6 py-3 text-left font-semibold">Name</th>
+                    <th class="px-6 py-3 text-left font-semibold">Phone</th>
+                    <th class="px-6 py-3 text-left font-semibold">Email</th>
+                    <th class="px-6 py-3 text-left font-semibold">Balance</th>
+                    <th class="px-6 py-3 text-left font-semibold">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var customer in customers)
+                {
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-6 py-4">@customer.Name</td>
+                        <td class="px-6 py-4">@customer.Phone</td>
+                        <td class="px-6 py-4">@customer.Email</td>
+                        <td class="px-6 py-4 font-semibold">@((customer.OpeningBalance ?? 0m).ToString("C"))</td>
+                        <td class="px-6 py-4">
+                            <button @onclick="() => EditCustomer(customer)" class="bg-blue-500 text-white px-3 py-1 rounded mr-2">✏️ Edit</button>
+                            <button @onclick="() => DeleteCustomer(customer.Id)" class="bg-red-500 text-white px-3 py-1 rounded">🗑️ Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private List<Customer> customers = new();
+    private Customer newCustomer = new();
+    private bool showForm = false;
+    private bool isEditing = false;
+    private int currentUserId = 1; // Mock user ID
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomers();
+    }
+
+    private async Task LoadCustomers()
+    {
+        customers = await CustomerService.GetAllAsync(currentUserId);
+    }
+
+    private void ShowAddForm()
+    {
+        newCustomer = new Customer { UserId = currentUserId };
+        isEditing = false;
+        showForm = true;
+    }
+
+    private void EditCustomer(Customer customer)
+    {
+        newCustomer = new Customer 
+        { 
+            Id = customer.Id,
+            Name = customer.Name,
+            Phone = customer.Phone,
+            Email = customer.Email,
+            OpeningBalance = customer.OpeningBalance,
+            UserId = customer.UserId
+        };
+        isEditing = true;
+        showForm = true;
+    }
+
+    private async Task SaveCustomer()
+    {
+        if (isEditing)
+        {
+            await CustomerService.UpdateAsync(newCustomer);
+        }
+        else
+        {
+            await CustomerService.AddAsync(newCustomer);
+        }
+        await LoadCustomers();
+        CancelForm();
+    }
+
+    private async Task DeleteCustomer(int id)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure?"))
+        {
+            await CustomerService.DeleteAsync(id);
+            await LoadCustomers();
+        }
+    }
+
+    private void CancelForm()
+    {
+        showForm = false;
+        newCustomer = new();
+    }
+}

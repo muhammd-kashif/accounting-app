@@ -1,0 +1,12 @@
+﻿@page "/"
+@inject NavigationManager Navigation
+
+<PageTitle>Accounting App</PageTitle>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Redirect to login page when app starts
+        Navigation.NavigateTo("/login", true);
+    }
+}

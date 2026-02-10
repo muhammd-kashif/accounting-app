@@ -1,0 +1,169 @@
+@page "/income"
+@rendermode InteractiveServer
+@using AccountingApp.Services
+@using AccountingApp.Models
+@inject IIncomeService IncomeService
+@inject ICustomerService CustomerService
+@inject IJSRuntime JSRuntime
+
+<div class="p-8 bg-gray-100 min-h-screen">
+    <div class="mb-8 flex justify-between items-center">
+        <h1 class="text-4xl font-bold text-gray-800">💰 Income / Sales</h1>
+        <button @onclick="ShowAddForm" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg">
+            ➕ Add Income
+        </button>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    @if (showForm)
+    {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-semibold">@(isEditing ? "Edit Income" : "Add New Income")</h2>
+                    <button @onclick="CancelForm" class="text-gray-500 hover:text-gray-700 text-xl">✖</button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <input type="date" @bind="newIncome.Date" class="col-span-2 px-4 py-2 border rounded-lg">
+                    
+                    <select @bind="newIncome.CustomerId" class="px-4 py-2 border rounded-lg">
+                        <option value="0">Select Customer</option>
+                        @foreach (var customer in customers)
+                        {
+                            <option value="@customer.Id">@customer.Name</option>
+                        }
+                    </select>
+
+                    <select @bind="newIncome.PaymentType" class="px-4 py-2 border rounded-lg">
+                        <option value="">Payment Type</option>
+                        <option value="Cash">💵 Cash</option>
+                        <option value="Bank">🏦 Bank</option>
+                    </select>
+
+                    <input type="number" @bind="newIncome.Amount" placeholder="Amount" class="col-span-2 px-4 py-2 border rounded-lg" step="0.01">
+                    <textarea @bind="newIncome.Description" placeholder="Description" class="col-span-2 px-4 py-2 border rounded-lg" rows="3"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <button @onclick="CancelForm" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg">
+                        Cancel
+                    </button>
+                    <button @onclick="SaveIncome" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg">
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Income Table -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="px-6 py-3 text-left font-semibold">Date</th>
+                    <th class="px-6 py-3 text-left font-semibold">Customer</th>
+                    <th class="px-6 py-3 text-left font-semibold">Amount</th>
+                    <th class="px-6 py-3 text-left font-semibold">Payment Type</th>
+                    <th class="px-6 py-3 text-left font-semibold">Description</th>
+                    <th class="px-6 py-3 text-left font-semibold">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var income in incomes)
+                {
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="px-6 py-4">@income.Date?.ToString("yyyy-MM-dd")</td>
+                        <td class="px-6 py-4">@income.Customer?.Name</td>
+                        <td class="px-6 py-4 font-semibold text-green-600">@income.Amount.ToString("C")</td>
+                        <td class="px-6 py-4">@income.PaymentType</td>
+                        <td class="px-6 py-4">@income.Description</td>
+                        <td class="px-6 py-4">
+                            <button @onclick="() => EditIncome(income)" class="bg-blue-500 text-white px-3 py-1 rounded mr-2">✏️</button>
+                            <button @onclick="() => DeleteIncome(income.Id)" class="bg-red-500 text-white px-3 py-1 rounded">🗑️</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private List<Income> incomes = new();
+    private List<Customer> customers = new();
+    private Income newIncome = new();
+    private bool showForm = false;
+    private bool isEditing = false;
+    private int currentUserId = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        incomes = await IncomeService.GetAllAsync(currentUserId);
+        customers = await CustomerService.GetAllAsync(currentUserId);
+    }
+
+    private void ShowAddForm()
+    {
+        newIncome = new Income { UserId = currentUserId, Date = DateTime.Now };
+        isEditing = false;
+        showForm = true;
+    }
+
+    private void EditIncome(Income income)
+    {
+        newIncome = new Income
+        {
+            Id = income.Id,
+            Date = income.Date,
+            CustomerId = income.CustomerId,
+            Amount = income.Amount,
+            PaymentType = income.PaymentType,
+            Description = income.Description,
+            UserId = income.UserId
+        };
+        isEditing = true;
+        showForm = true;
+    }
+
+    private async Task SaveIncome()
+    {
+        if (newIncome.CustomerId == 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Customer select karein");
+            return;
+        }
+
+        if (isEditing)
+        {
+            await IncomeService.UpdateAsync(newIncome);
+        }
+        else
+        {
+            await IncomeService.AddAsync(newIncome);
+        }
+        await LoadData();
+        CancelForm();
+    }
+
+    private async Task DeleteIncome(int id)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Delete karein?"))
+        {
+            await IncomeService.DeleteAsync(id);
+            await LoadData();
+        }
+    }
+
+    private void CancelForm()
+    {
+        showForm = false;
+        newIncome = new();
+    }
+}
