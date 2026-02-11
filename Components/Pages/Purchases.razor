@@ -1,0 +1,282 @@
+@page "/purchases"
+@rendermode InteractiveServer
+@using AccountingApp.Services
+@using AccountingApp.Models
+@inject IPurchaseService PurchaseService
+@inject ISupplierService SupplierService
+@inject IProductService ProductService
+@inject IJSRuntime JSRuntime
+
+<div class="p-4 md:p-8 bg-gray-100 min-h-screen">
+    <div class="mb-6 md:mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        <h1 class="text-4xl font-bold text-gray-800">🛒 Purchases (Add Expense)</h1>
+        <button @onclick="ShowAddForm" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg w-full md:w-auto">
+            ➕ New Purchase
+        </button>
+    </div>
+
+    <!-- Add Purchase Modal -->
+    @if (showForm)
+    {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-semibold">New Purchase</h2>
+                    <button @onclick="CancelForm" class="text-gray-500 hover:text-gray-700 text-xl">✖</button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Vendor *</label>
+                        <select @bind="newPurchase.SupplierId" class="w-full px-4 py-2 border rounded-lg">
+                            <option value="0">-- Select Vendor --</option>
+                            @foreach (var s in suppliers)
+                            {
+                                <option value="@s.Id">@s.SupplierName</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                        <select @bind="newPurchase.PaymentMethod" class="w-full px-4 py-2 border rounded-lg">
+                            <option value="Cash">Cash</option>
+                            <option value="Bank">Bank Transfer</option>
+                            <option value="Credit">Credit (On Account)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                        <input type="date" @bind="purchaseDate" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Reference No.</label>
+                        <input type="text" @bind="newPurchase.ReferenceNo" placeholder="Invoice/Ref #" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                </div>
+
+                <!-- Items Section -->
+                <div class="border rounded-lg p-4 mb-4">
+                    <h3 class="font-semibold text-lg mb-3">📋 Items</h3>
+                    
+                    @for (int i = 0; i < purchaseItems.Count; i++)
+                    {
+                        var index = i;
+                        <div class="grid grid-cols-12 gap-2 mb-2 items-end">
+                            <div class="col-span-5">
+                                @if (index == 0)
+                                {
+                                    <label class="block text-xs text-gray-500 mb-1">Item</label>
+                                }
+                                <select @bind="purchaseItems[index].ProductId" @bind:after="() => OnProductSelected(index)" class="w-full px-3 py-2 border rounded text-sm">
+                                    <option value="0">-- Select Item --</option>
+                                    @foreach (var p in allProducts)
+                                    {
+                                        <option value="@p.Id">@p.ItemName</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-span-2">
+                                @if (index == 0)
+                                {
+                                    <label class="block text-xs text-gray-500 mb-1">Qty</label>
+                                }
+                                <input type="number" @bind="purchaseItems[index].Quantity" @bind:after="() => CalculateLineTotal(index)" min="1" class="w-full px-3 py-2 border rounded text-sm">
+                            </div>
+                            <div class="col-span-2">
+                                @if (index == 0)
+                                {
+                                    <label class="block text-xs text-gray-500 mb-1">Rate</label>
+                                }
+                                <input type="number" step="0.01" @bind="purchaseItems[index].Rate" @bind:after="() => CalculateLineTotal(index)" class="w-full px-3 py-2 border rounded text-sm">
+                            </div>
+                            <div class="col-span-2">
+                                @if (index == 0)
+                                {
+                                    <label class="block text-xs text-gray-500 mb-1">Amount</label>
+                                }
+                                <input type="text" value="@purchaseItems[index].Amount.ToString("N2")" readonly class="w-full px-3 py-2 border rounded text-sm bg-gray-50">
+                            </div>
+                            <div class="col-span-1">
+                                <button @onclick="() => RemoveItem(index)" class="text-red-500 hover:text-red-700 text-lg">✖</button>
+                            </div>
+                        </div>
+                    }
+
+                    <button @onclick="AddItem" class="mt-2 text-indigo-600 hover:text-indigo-800 font-medium text-sm">
+                        + Add Item
+                    </button>
+                </div>
+
+                <!-- Total -->
+                <div class="flex justify-end mb-4">
+                    <div class="bg-gray-50 px-6 py-3 rounded-lg">
+                        <span class="text-lg font-semibold">Total: </span>
+                        <span class="text-2xl font-bold text-green-600">@purchaseItems.Sum(i => i.Amount).ToString("C")</span>
+                    </div>
+                </div>
+
+                <div class="md:col-span-2 mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea @bind="newPurchase.Notes" rows="2" class="w-full px-4 py-2 border rounded-lg" placeholder="Any notes..."></textarea>
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <button @onclick="CancelForm" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg">
+                        Cancel
+                    </button>
+                    <button @onclick="SavePurchase" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg">
+                        Save Purchase
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Purchases Table -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[800px]">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-semibold">Date</th>
+                        <th class="px-4 py-3 text-left font-semibold">Vendor</th>
+                        <th class="px-4 py-3 text-left font-semibold">Items</th>
+                        <th class="px-4 py-3 text-left font-semibold">Payment</th>
+                        <th class="px-4 py-3 text-right font-semibold">Amount</th>
+                        <th class="px-4 py-3 text-left font-semibold">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var purchase in purchases)
+                    {
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="px-4 py-3">@purchase.Date.ToString("dd MMM yyyy")</td>
+                            <td class="px-4 py-3 font-semibold">@purchase.Supplier?.SupplierName</td>
+                            <td class="px-4 py-3 text-sm text-gray-600">
+                                @string.Join(", ", purchase.Items.Select(i => $"{i.Product?.ItemName} x{i.Quantity}"))
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 rounded text-xs font-medium @GetPaymentBadge(purchase.PaymentMethod)">
+                                    @purchase.PaymentMethod
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-right font-bold text-red-600">@purchase.TotalAmount.ToString("C")</td>
+                            <td class="px-4 py-3">
+                                <button @onclick="() => DeletePurchase(purchase.Id)" class="bg-red-500 text-white px-3 py-1 rounded text-sm">🗑️</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Purchase> purchases = new();
+    private List<Supplier> suppliers = new();
+    private List<Product> allProducts = new();
+    private Purchase newPurchase = new();
+    private List<PurchaseItem> purchaseItems = new();
+    private DateTime purchaseDate = DateTime.Today;
+    private bool showForm = false;
+    private int currentUserId = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        purchases = await PurchaseService.GetAllAsync(currentUserId);
+        suppliers = await SupplierService.GetAllAsync(currentUserId);
+        allProducts = await ProductService.GetAllAsync(currentUserId);
+    }
+
+    private void ShowAddForm()
+    {
+        newPurchase = new Purchase { UserId = currentUserId };
+        purchaseItems = new List<PurchaseItem> { new PurchaseItem() };
+        purchaseDate = DateTime.Today;
+        showForm = true;
+    }
+
+    private void AddItem()
+    {
+        purchaseItems.Add(new PurchaseItem());
+    }
+
+    private void RemoveItem(int index)
+    {
+        if (purchaseItems.Count > 1)
+        {
+            purchaseItems.RemoveAt(index);
+        }
+    }
+
+    private void OnProductSelected(int index)
+    {
+        var product = allProducts.FirstOrDefault(p => p.Id == purchaseItems[index].ProductId);
+        if (product != null)
+        {
+            purchaseItems[index].Rate = product.PurchasePrice;
+            if (purchaseItems[index].Quantity == 0)
+                purchaseItems[index].Quantity = 1;
+            CalculateLineTotal(index);
+        }
+    }
+
+    private void CalculateLineTotal(int index)
+    {
+        purchaseItems[index].Amount = purchaseItems[index].Quantity * purchaseItems[index].Rate;
+    }
+
+    private async Task SavePurchase()
+    {
+        if (newPurchase.SupplierId == 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Please select a vendor!");
+            return;
+        }
+
+        var validItems = purchaseItems.Where(i => i.ProductId > 0 && i.Quantity > 0).ToList();
+        if (!validItems.Any())
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Please add at least one item!");
+            return;
+        }
+
+        newPurchase.Date = purchaseDate;
+        newPurchase.Items = validItems;
+        newPurchase.TotalAmount = validItems.Sum(i => i.Amount);
+
+        await PurchaseService.AddAsync(newPurchase);
+        await LoadData();
+        CancelForm();
+    }
+
+    private async Task DeletePurchase(int id)
+    {
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Delete this purchase? Stock will be reversed."))
+        {
+            await PurchaseService.DeleteAsync(id);
+            await LoadData();
+        }
+    }
+
+    private void CancelForm()
+    {
+        showForm = false;
+        newPurchase = new();
+        purchaseItems = new();
+    }
+
+    private string GetPaymentBadge(string method) => method switch
+    {
+        "Cash" => "bg-green-100 text-green-800",
+        "Bank" => "bg-blue-100 text-blue-800",
+        "Credit" => "bg-yellow-100 text-yellow-800",
+        _ => "bg-gray-100 text-gray-800"
+    };
+}

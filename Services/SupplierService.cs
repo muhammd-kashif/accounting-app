@@ -53,6 +53,7 @@ namespace AccountingApp.Services
             existing.SupplierName = supplier.SupplierName;
             existing.Contact = supplier.Contact;
             existing.Email = supplier.Email;
+            existing.Address = supplier.Address;
             existing.OpeningBalance = supplier.OpeningBalance;
             existing.UpdatedDate = DateTime.Now;
 

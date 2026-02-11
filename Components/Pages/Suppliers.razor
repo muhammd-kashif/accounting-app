@@ -3,149 +3,761 @@
 @using AccountingApp.Services
 @using AccountingApp.Models
 @inject ISupplierService SupplierService
+@inject IProductService ProductService
+@inject IPurchaseService PurchaseService
 @inject IJSRuntime JSRuntime
 
 <div class="p-4 md:p-8 bg-gray-100 min-h-screen">
     <div class="mb-6 md:mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-        <h1 class="text-4xl font-bold text-gray-800">🏢 Suppliers</h1>
-        <button @onclick="ShowAddForm" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg w-full md:w-auto">
-            ➕ Add Supplier
-        </button>
+        <h1 class="text-4xl font-bold text-gray-800">🏢 Vendors / Suppliers</h1>
+        <div class="flex gap-2">
+            <button @onclick="ShowPurchaseForm" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg w-full md:w-auto">
+                ➕ Add Supplier
+            </button>
+        </div>
     </div>
 
-    <!-- Add/Edit Modal -->
-    @if (showForm)
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4 text-center">
+            <p class="text-sm text-gray-500">Total Vendors</p>
+            <p class="text-2xl font-bold text-indigo-600">@suppliers.Count</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 text-center">
+            <p class="text-sm text-gray-500">Total Purchases</p>
+            <p class="text-2xl font-bold text-blue-600">@purchases.Count</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 text-center">
+            <p class="text-sm text-gray-500">Total Amount</p>
+            <p class="text-2xl font-bold text-red-600">@purchases.Sum(p => p.TotalAmount).ToString("C")</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 text-center">
+            <p class="text-sm text-gray-500">Total Items</p>
+            <p class="text-2xl font-bold text-green-600">@allProducts.Count</p>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- ADD SUPPLIER POPUP (Complete Form)           -->
+    <!-- ============================================ -->
+    @if (showPurchaseForm)
     {
-        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 md:p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl p-4 md:p-6 max-h-[95vh] overflow-y-auto">
                 <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-2xl font-semibold">@(isEditing ? "Edit Supplier" : "Add New Supplier")</h2>
-                    <button @onclick="CancelForm" class="text-gray-500 hover:text-gray-700 text-xl">✖</button>
+                    <h2 class="text-2xl font-semibold text-gray-800">➕ Add Supplier / Purchase</h2>
+                    <button @onclick="CancelPurchaseForm" class="text-gray-500 hover:text-gray-700 text-2xl">✖</button>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <input type="text" @bind="newSupplier.SupplierName" placeholder="Supplier Name" class="md:col-span-2 px-4 py-2 border rounded-lg">
-                    <input type="tel" @bind="newSupplier.Contact" placeholder="Contact Number" class="px-4 py-2 border rounded-lg">
-                    <input type="email" @bind="newSupplier.Email" placeholder="Email" class="px-4 py-2 border rounded-lg">
-                    <input type="number" @bind="newSupplier.OpeningBalance" placeholder="Opening Balance" class="md:col-span-2 px-4 py-2 border rounded-lg">
+                <!-- Supplier Info Section -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <h3 class="font-semibold text-blue-800 mb-3">🏢 Supplier Details</h3>
+
+                    <!-- Select Existing OR New -->
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Select Existing Vendor or Enter New</label>
+                        <select @bind="selectedSupplierId" @bind:after="OnSupplierSelected" class="w-full px-4 py-2 border rounded-lg">
+                            <option value="0">-- New Supplier (type below) --</option>
+                            @foreach (var s in suppliers)
+                            {
+                                <option value="@s.Id">@s.SupplierName — @s.Contact</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Supplier Name *</label>
+                            <input type="text" @bind="supplierName" placeholder="e.g. Ali Stationers" class="w-full px-4 py-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Phone *</label>
+                            <input type="tel" @bind="supplierPhone" placeholder="03XXXXXXXXX" class="w-full px-4 py-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Email (optional)</label>
+                            <input type="email" @bind="supplierEmail" placeholder="email@example.com" class="w-full px-4 py-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Address</label>
+                            <input type="text" @bind="supplierAddress" placeholder="Shop address" class="w-full px-4 py-2 border rounded-lg">
+                        </div>
+                    </div>
                 </div>
 
-                <div class="flex justify-end gap-3">
-                    <button @onclick="CancelForm" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg">
+                <!-- Purchase Info Section -->
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                    <h3 class="font-semibold text-green-800 mb-3">📋 Purchase Details</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Date *</label>
+                            <input type="date" @bind="purchaseDate" class="w-full px-4 py-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Payment Method *</label>
+                            <select @bind="paymentMethod" class="w-full px-4 py-2 border rounded-lg">
+                                <option value="Cash">Cash</option>
+                                <option value="Bank">Bank Transfer</option>
+                                <option value="Credit">Credit (Udhar)</option>
+                                <option value="Cheque">Cheque</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Reference / Invoice No.</label>
+                            <input type="text" @bind="referenceNo" placeholder="INV-001" class="w-full px-4 py-2 border rounded-lg">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Items Section -->
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <h3 class="font-semibold text-yellow-800 mb-3">📦 Items Purchased</h3>
+
+                    <!-- Header Row -->
+                    <div class="hidden md:grid grid-cols-12 gap-2 mb-2 text-xs font-semibold text-gray-500 uppercase">
+                        <div class="col-span-5">Item Name</div>
+                        <div class="col-span-2 text-center">Quantity</div>
+                        <div class="col-span-2 text-center">Rate (Rs)</div>
+                        <div class="col-span-2 text-center">Amount</div>
+                        <div class="col-span-1"></div>
+                    </div>
+
+                    @for (int i = 0; i < formItems.Count; i++)
+                    {
+                        var index = i;
+                        <div class="grid grid-cols-12 gap-2 mb-2 items-center">
+                            <!-- Item Name: dropdown of existing + type new -->
+                            <div class="col-span-12 md:col-span-5">
+                                <select @bind="formItems[index].SelectedProductId" @bind:after="() => OnItemProductSelected(index)" class="w-full px-3 py-2 border rounded text-sm mb-1 md:mb-0 @(formItems[index].SelectedProductId == -1 ? "hidden" : "")">
+                                    <option value="0">-- Select Item --</option>
+                                    @foreach (var p in allProducts)
+                                    {
+                                        <option value="@p.Id">@p.ItemName (Stock: @p.StockQuantity)</option>
+                                    }
+                                    <option value="-1">+ New Item (type name)</option>
+                                </select>
+                                @if (formItems[index].SelectedProductId == -1)
+                                {
+                                    <div class="flex gap-1">
+                                        <input type="text" @bind="formItems[index].NewItemName" placeholder="New item name..." class="flex-1 px-3 py-2 border rounded text-sm">
+                                        <button @onclick="() => formItems[index].SelectedProductId = 0" class="text-gray-400 hover:text-gray-600 text-sm px-2">↩</button>
+                                    </div>
+                                }
+                            </div>
+                            <div class="col-span-4 md:col-span-2">
+                                <input type="number" @bind="formItems[index].Quantity" @bind:after="() => CalcLineTotal(index)" min="1" placeholder="Qty" class="w-full px-3 py-2 border rounded text-sm text-center">
+                            </div>
+                            <div class="col-span-4 md:col-span-2">
+                                <input type="number" step="0.01" @bind="formItems[index].Rate" @bind:after="() => CalcLineTotal(index)" placeholder="Rate" class="w-full px-3 py-2 border rounded text-sm text-center">
+                            </div>
+                            <div class="col-span-3 md:col-span-2">
+                                <input type="text" value="@formItems[index].Amount.ToString("N2")" readonly class="w-full px-3 py-2 border rounded text-sm text-center bg-gray-100 font-semibold">
+                            </div>
+                            <div class="col-span-1">
+                                @if (formItems.Count > 1)
+                                {
+                                    <button @onclick="() => RemoveFormItem(index)" class="text-red-500 hover:text-red-700 text-lg w-full text-center">✖</button>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <button @onclick="AddFormItem" class="mt-2 text-indigo-600 hover:text-indigo-800 font-medium text-sm">
+                        + Add Another Item
+                    </button>
+                </div>
+
+                <!-- Total & Notes -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                    <div class="w-full md:w-1/2">
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Notes (optional)</label>
+                        <textarea @bind="notes" rows="2" class="w-full px-4 py-2 border rounded-lg text-sm" placeholder="Any notes..."></textarea>
+                    </div>
+                    <div class="bg-gray-50 border-2 border-green-300 px-6 py-4 rounded-lg text-right">
+                        <p class="text-sm text-gray-500">Grand Total</p>
+                        <p class="text-3xl font-bold text-green-600">Rs @formItems.Sum(i => i.Amount).ToString("N2")</p>
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="flex justify-end gap-3 pt-2 border-t">
+                    <button @onclick="CancelPurchaseForm" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg">
                         Cancel
                     </button>
-                    <button @onclick="SaveSupplier" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg">
-                        Save
+                    <button @onclick="SaveFullPurchase" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg text-lg">
+                        Save Purchase
                     </button>
                 </div>
             </div>
         </div>
     }
 
-    <!-- Suppliers Table -->
-    <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[700px]">
-            <thead class="bg-gray-200">
-                <tr>
-                    <th class="px-6 py-3 text-left font-semibold">Supplier Name</th>
-                    <th class="px-6 py-3 text-left font-semibold">Contact</th>
-                    <th class="px-6 py-3 text-left font-semibold">Email</th>
-                    <th class="px-6 py-3 text-left font-semibold">Balance</th>
-                    <th class="px-6 py-3 text-left font-semibold">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var supplier in suppliers)
-                {
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="px-6 py-4 font-semibold">@supplier.SupplierName</td>
-                        <td class="px-6 py-4">@supplier.Contact</td>
-                        <td class="px-6 py-4">@supplier.Email</td>
-                        <td class="px-6 py-4 font-semibold text-blue-600">@supplier.OpeningBalance.ToString("C")</td>
-                        <td class="px-6 py-4">
-                            <button @onclick="() => EditSupplier(supplier)" class="bg-blue-500 text-white px-3 py-1 rounded mr-2">✏️ Edit</button>
-                            <button @onclick="() => DeleteSupplier(supplier.Id)" class="bg-red-500 text-white px-3 py-1 rounded">🗑️ Delete</button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-            </table>
+    <!-- ============================================ -->
+    <!-- EDIT SUPPLIER POPUP (Info only)              -->
+    <!-- ============================================ -->
+    @if (showEditForm)
+    {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-semibold">✏️ Edit Supplier</h2>
+                    <button @onclick="() => showEditForm = false" class="text-gray-500 hover:text-gray-700 text-xl">✖</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Supplier Name</label>
+                        <input type="text" @bind="editSupplier.SupplierName" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                        <input type="tel" @bind="editSupplier.Contact" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Email</label>
+                        <input type="email" @bind="editSupplier.Email" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Address</label>
+                        <input type="text" @bind="editSupplier.Address" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button @onclick="() => showEditForm = false" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg">Cancel</button>
+                    <button @onclick="SaveEditSupplier" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg">Update</button>
+                </div>
+            </div>
         </div>
+    }
+
+    <!-- ============================================ -->
+    <!-- PURCHASE DETAIL POPUP                        -->
+    <!-- ============================================ -->
+    <!-- ============================================ -->
+    <!-- PURCHASE DETAIL POPUP (INVOICE)              -->
+    <!-- ============================================ -->
+    @if (showDetail && detailPurchase != null)
+    {
+        <!-- Print Styles -->
+        <style>
+            @@media print {
+                body * {
+                    visibility: hidden;
+                }
+                #invoice-modal, #invoice-modal * {
+                    visibility: visible;
+                }
+                #invoice-modal {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    margin: 0;
+                    padding: 0;
+                    background-color: white;
+                    box-shadow: none !important;
+                }
+                .no-print {
+                    display: none !important;
+                }
+                /* Ensure background colors print */
+                * {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
+            }
+        </style>
+
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 print:p-0">
+            <div id="invoice-modal" class="bg-white rounded-lg shadow-xl w-full max-w-3xl p-8 max-h-[90vh] overflow-y-auto relative">
+                
+                <!-- Invoice Header -->
+                <div class="flex justify-between items-start border-b pb-6 mb-6">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-800">PURCHASE INVOICE</h1>
+                         <p class="text-gray-500 mt-1">Acconting App</p> <!-- Replace with dynamic company name if available -->
+                    </div>
+                    <div class="text-right">
+                        <h2 class="text-xl font-semibold text-gray-700">INVOICE #</h2>
+                        <p class="text-gray-600 font-mono">@detailPurchase.Id.ToString("D5")</p>
+                        @if(!string.IsNullOrEmpty(detailPurchase.ReferenceNo))
+                        {
+                            <p class="text-sm text-gray-500 mt-1">Ref: @detailPurchase.ReferenceNo</p>
+                        }
+                    </div>
+                </div>
+
+                <!-- Info Grid -->
+                <div class="grid grid-cols-2 gap-8 mb-8">
+                    <div>
+                        <h3 class="text-gray-500 font-semibold text-sm uppercase tracking-wider mb-2">Vendor Details</h3>
+                        <p class="font-bold text-lg text-gray-800">@detailPurchase.Supplier?.SupplierName</p>
+                        <p class="text-gray-600">@detailPurchase.Supplier?.Address</p>
+                        <p class="text-gray-600">@detailPurchase.Supplier?.Contact</p>
+                        <p class="text-gray-600">@detailPurchase.Supplier?.Email</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="mb-2">
+                            <span class="text-gray-500 font-semibold text-sm uppercase tracking-wider">Date:</span>
+                            <span class="font-medium text-gray-800 ml-2">@detailPurchase.Date.ToString("dd MMM yyyy")</span>
+                        </div>
+                        <div class="mb-2">
+                            <span class="text-gray-500 font-semibold text-sm uppercase tracking-wider">Payment Method:</span>
+                            <span class="font-medium text-gray-800 ml-2">@detailPurchase.PaymentMethod</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Items Table -->
+                <table class="w-full mb-8">
+                    <thead>
+                        <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                            <th class="py-3 px-4 text-left font-bold">Item Description</th>
+                            <th class="py-3 px-4 text-center font-bold">Qty</th>
+                            <th class="py-3 px-4 text-right font-bold">Rate</th>
+                            <th class="py-3 px-4 text-right font-bold">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in detailPurchase.Items)
+                        {
+                            <tr class="border-b border-gray-100 last:border-0">
+                                <td class="py-3 px-4 font-medium text-gray-800">@item.Product?.ItemName</td>
+                                <td class="py-3 px-4 text-center text-gray-600">@item.Quantity</td>
+                                <td class="py-3 px-4 text-right text-gray-600">@item.Rate.ToString("N2")</td>
+                                <td class="py-3 px-4 text-right font-bold text-gray-800">@item.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <!-- Totals -->
+                <div class="flex justify-end mb-8">
+                    <div class="w-1/2">
+                        <div class="flex justify-between py-2 border-b border-gray-200">
+                            <span class="font-bold text-gray-600">Total</span>
+                            <span class="font-bold text-2xl text-indigo-600">Rs @detailPurchase.TotalAmount.ToString("N2")</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                @if (!string.IsNullOrEmpty(detailPurchase.Notes))
+                {
+                    <div class="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-100">
+                        <h4 class="text-sm font-bold text-gray-500 uppercase mb-1">Notes</h4>
+                        <p class="text-gray-700 italic">@detailPurchase.Notes</p>
+                    </div>
+                }
+
+                <!-- Footer / Actions (Hidden on Print) -->
+                <div class="flex justify-end gap-3 mt-8 pt-4 border-t no-print">
+                    <button @onclick="PrintInvoice" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg flex items-center gap-2">
+                        🖨️ Print Invoice
+                    </button>
+                    <button @onclick="() => showDetail = false" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- ============================================ -->
+    <!-- TABS: Purchases | Suppliers List              -->
+    <!-- ============================================ -->
+    <div class="flex gap-2 mb-4">
+        <button @onclick='() => activeTab = "purchases"' class="px-4 py-2 rounded-lg font-semibold text-sm @(activeTab == "purchases" ? "bg-indigo-500 text-white" : "bg-white text-gray-600 hover:bg-gray-100")">
+            🛒 All Purchases
+        </button>
+        <button @onclick='() => activeTab = "suppliers"' class="px-4 py-2 rounded-lg font-semibold text-sm @(activeTab == "suppliers" ? "bg-indigo-500 text-white" : "bg-white text-gray-600 hover:bg-gray-100")">
+            🏢 Suppliers List
+        </button>
     </div>
+
+    <!-- TAB 1: Purchases Table -->
+    @if (activeTab == "purchases")
+    {
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[800px]">
+                    <thead class="bg-gray-200">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-semibold">Date</th>
+                            <th class="px-4 py-3 text-left font-semibold">Vendor</th>
+                            <th class="px-4 py-3 text-left font-semibold">Items</th>
+                            <th class="px-4 py-3 text-left font-semibold">Payment</th>
+                            <th class="px-4 py-3 text-left font-semibold">Ref #</th>
+                            <th class="px-4 py-3 text-right font-semibold">Amount</th>
+                            <th class="px-4 py-3 text-center font-semibold">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!purchases.Any())
+                        {
+                            <tr>
+                                <td colspan="7" class="px-4 py-8 text-center text-gray-400">No purchases yet. Click "Add Supplier" to start.</td>
+                            </tr>
+                        }
+                        @foreach (var purchase in purchases)
+                        {
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="px-4 py-3 text-sm">@purchase.Date.ToString("dd MMM yyyy")</td>
+                                <td class="px-4 py-3 font-semibold">@purchase.Supplier?.SupplierName</td>
+                                <td class="px-4 py-3 text-sm text-gray-600">
+                                    @string.Join(", ", purchase.Items.Select(i => $"{i.Product?.ItemName} x{i.Quantity}"))
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="px-2 py-1 rounded text-xs font-medium @GetPaymentBadge(purchase.PaymentMethod)">
+                                        @purchase.PaymentMethod
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-sm text-gray-500">@purchase.ReferenceNo</td>
+                                <td class="px-4 py-3 text-right font-bold text-red-600">Rs @purchase.TotalAmount.ToString("N2")</td>
+                                <td class="px-4 py-3 text-center">
+                                    <button @onclick="() => ShowDetail(purchase)" class="bg-blue-500 text-white px-2 py-1 rounded text-xs mr-1">👁️</button>
+                                    <button @onclick="() => DeletePurchase(purchase.Id)" class="bg-red-500 text-white px-2 py-1 rounded text-xs">🗑️</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <!-- TAB 2: Suppliers List Table -->
+    @if (activeTab == "suppliers")
+    {
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[700px]">
+                    <thead class="bg-gray-200">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-semibold">Vendor Name</th>
+                            <th class="px-4 py-3 text-left font-semibold">Phone</th>
+                            <th class="px-4 py-3 text-left font-semibold">Address</th>
+                            <th class="px-4 py-3 text-left font-semibold">Email</th>
+                            <th class="px-4 py-3 text-center font-semibold">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!suppliers.Any())
+                        {
+                            <tr>
+                                <td colspan="5" class="px-4 py-8 text-center text-gray-400">No suppliers yet.</td>
+                            </tr>
+                        }
+                        @foreach (var supplier in suppliers)
+                        {
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="px-4 py-3 font-semibold">@supplier.SupplierName</td>
+                                <td class="px-4 py-3">@supplier.Contact</td>
+                                <td class="px-4 py-3">@supplier.Address</td>
+                                <td class="px-4 py-3">@supplier.Email</td>
+                                <td class="px-4 py-3 text-center">
+                                    <button @onclick="() => StartEditSupplier(supplier)" class="bg-blue-500 text-white px-3 py-1 rounded text-sm mr-1">✏️ Edit</button>
+                                    <button @onclick="() => DeleteSupplier(supplier.Id)" class="bg-red-500 text-white px-3 py-1 rounded text-sm">🗑️</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
+    // ========== Data Lists ==========
     private List<Supplier> suppliers = new();
-    private Supplier newSupplier = new();
-    private bool showForm = false;
-    private bool isEditing = false;
-    private int currentUserId = 1; // Mock user ID
+    private List<Product> allProducts = new();
+    private List<Purchase> purchases = new();
 
+    // ========== UI State ==========
+    private string activeTab = "purchases";
+    private bool showPurchaseForm = false;
+    private bool showEditForm = false;
+    private bool showDetail = false;
+    private Purchase? detailPurchase;
+    private int currentUserId = 1;
+
+    // ========== Purchase Form Fields ==========
+    private int selectedSupplierId = 0;
+    private string supplierName = string.Empty;
+    private string supplierPhone = string.Empty;
+    private string supplierEmail = string.Empty;
+    private string supplierAddress = string.Empty;
+    private DateTime purchaseDate = DateTime.Today;
+    private string paymentMethod = "Cash";
+    private string referenceNo = string.Empty;
+    private string notes = string.Empty;
+    private List<FormItem> formItems = new();
+
+    // ========== Edit Supplier ==========
+    private Supplier editSupplier = new();
+
+    // ========== Helper class for items in form ==========
+    private class FormItem
+    {
+        public int SelectedProductId { get; set; } = 0;
+        public string NewItemName { get; set; } = string.Empty;
+        public int Quantity { get; set; } = 1;
+        public decimal Rate { get; set; }
+        public decimal Amount { get; set; }
+    }
+
+    // ========== Lifecycle ==========
     protected override async Task OnInitializedAsync()
     {
-        await LoadSuppliers();
+        await LoadAll();
     }
 
-    private async Task LoadSuppliers()
+    private async Task LoadAll()
     {
         suppliers = await SupplierService.GetAllAsync(currentUserId);
+        allProducts = await ProductService.GetAllAsync(currentUserId);
+        purchases = await PurchaseService.GetAllAsync(currentUserId);
     }
 
-    private void ShowAddForm()
+    // ========== PURCHASE FORM ==========
+    private void ShowPurchaseForm()
     {
-        newSupplier = new Supplier { UserId = currentUserId };
-        isEditing = false;
-        showForm = true;
+        selectedSupplierId = 0;
+        supplierName = string.Empty;
+        supplierPhone = string.Empty;
+        supplierEmail = string.Empty;
+        supplierAddress = string.Empty;
+        purchaseDate = DateTime.Today;
+        paymentMethod = "Cash";
+        referenceNo = string.Empty;
+        notes = string.Empty;
+        formItems = new List<FormItem> { new FormItem() };
+        showPurchaseForm = true;
     }
 
-    private void EditSupplier(Supplier supplier)
+    private void CancelPurchaseForm()
     {
-        newSupplier = new Supplier 
-        { 
+        showPurchaseForm = false;
+    }
+
+    private void OnSupplierSelected()
+    {
+        if (selectedSupplierId > 0)
+        {
+            var s = suppliers.FirstOrDefault(x => x.Id == selectedSupplierId);
+            if (s != null)
+            {
+                supplierName = s.SupplierName;
+                supplierPhone = s.Contact;
+                supplierEmail = s.Email;
+                supplierAddress = s.Address;
+            }
+        }
+        else
+        {
+            supplierName = string.Empty;
+            supplierPhone = string.Empty;
+            supplierEmail = string.Empty;
+            supplierAddress = string.Empty;
+        }
+    }
+
+    private void OnItemProductSelected(int index)
+    {
+        if (formItems[index].SelectedProductId > 0)
+        {
+            var product = allProducts.FirstOrDefault(p => p.Id == formItems[index].SelectedProductId);
+            if (product != null)
+            {
+                formItems[index].Rate = product.PurchasePrice;
+                formItems[index].NewItemName = string.Empty;
+                CalcLineTotal(index);
+            }
+        }
+        else if (formItems[index].SelectedProductId == -1)
+        {
+            formItems[index].Rate = 0;
+            formItems[index].NewItemName = string.Empty;
+            CalcLineTotal(index);
+        }
+    }
+
+    private void CalcLineTotal(int index)
+    {
+        formItems[index].Amount = formItems[index].Quantity * formItems[index].Rate;
+    }
+
+    private void AddFormItem()
+    {
+        formItems.Add(new FormItem());
+    }
+
+    private void RemoveFormItem(int index)
+    {
+        if (formItems.Count > 1)
+            formItems.RemoveAt(index);
+    }
+
+    private async Task SaveFullPurchase()
+    {
+        // Validate supplier name
+        if (string.IsNullOrWhiteSpace(supplierName))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Supplier name is required!");
+            return;
+        }
+
+        // Validate items
+        var validItems = formItems.Where(i => (i.SelectedProductId > 0 || (i.SelectedProductId == -1 && !string.IsNullOrWhiteSpace(i.NewItemName))) && i.Quantity > 0 && i.Rate > 0).ToList();
+        if (!validItems.Any())
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Please add at least one item with quantity and rate!");
+            return;
+        }
+
+        // Step 1: Create or get supplier
+        int supplierId;
+        if (selectedSupplierId > 0)
+        {
+            // Update existing supplier info if changed
+            var existing = suppliers.FirstOrDefault(s => s.Id == selectedSupplierId);
+            if (existing != null)
+            {
+                existing.SupplierName = supplierName;
+                existing.Contact = supplierPhone;
+                existing.Email = supplierEmail;
+                existing.Address = supplierAddress;
+                await SupplierService.UpdateAsync(existing);
+            }
+            supplierId = selectedSupplierId;
+        }
+        else
+        {
+            // Create new supplier
+            var newSupplier = new Supplier
+            {
+                SupplierName = supplierName.Trim(),
+                Contact = supplierPhone,
+                Email = supplierEmail,
+                Address = supplierAddress,
+                UserId = currentUserId,
+                OpeningBalance = 0
+            };
+            await SupplierService.AddAsync(newSupplier);
+            supplierId = newSupplier.Id;
+        }
+
+        // Step 2: Resolve products (find existing or create new)
+        var purchaseItemsList = new List<PurchaseItem>();
+        foreach (var fi in validItems)
+        {
+            int productId;
+            if (fi.SelectedProductId > 0)
+            {
+                productId = fi.SelectedProductId;
+            }
+            else
+            {
+                // Create new product
+                var product = await ProductService.FindOrCreateByNameAsync(fi.NewItemName.Trim(), fi.Rate, currentUserId);
+                productId = product.Id;
+            }
+
+            purchaseItemsList.Add(new PurchaseItem
+            {
+                ProductId = productId,
+                Quantity = fi.Quantity,
+                Rate = fi.Rate,
+                Amount = fi.Quantity * fi.Rate
+            });
+        }
+
+        // Step 3: Create purchase record
+        var purchase = new Purchase
+        {
+            SupplierId = supplierId,
+            Date = purchaseDate,
+            PaymentMethod = paymentMethod,
+            ReferenceNo = referenceNo,
+            Notes = notes,
+            UserId = currentUserId,
+            Items = purchaseItemsList
+        };
+
+        await PurchaseService.AddAsync(purchase);
+
+        // Reload everything and close form
+        await LoadAll();
+        showPurchaseForm = false;
+        await JSRuntime.InvokeVoidAsync("alert", "Purchase saved successfully! Stock updated.");
+    }
+
+    // ========== EDIT SUPPLIER ==========
+    private void StartEditSupplier(Supplier supplier)
+    {
+        editSupplier = new Supplier
+        {
             Id = supplier.Id,
             SupplierName = supplier.SupplierName,
             Contact = supplier.Contact,
             Email = supplier.Email,
+            Address = supplier.Address,
             OpeningBalance = supplier.OpeningBalance,
             UserId = supplier.UserId
         };
-        isEditing = true;
-        showForm = true;
+        showEditForm = true;
     }
 
-    private async Task SaveSupplier()
+    private async Task SaveEditSupplier()
     {
-        if (string.IsNullOrEmpty(newSupplier.SupplierName))
+        if (string.IsNullOrEmpty(editSupplier.SupplierName))
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Supplier name required hai");
+            await JSRuntime.InvokeVoidAsync("alert", "Supplier name required!");
             return;
         }
-
-        if (isEditing)
-        {
-            await SupplierService.UpdateAsync(newSupplier);
-        }
-        else
-        {
-            await SupplierService.AddAsync(newSupplier);
-        }
-        await LoadSuppliers();
-        CancelForm();
+        await SupplierService.UpdateAsync(editSupplier);
+        await LoadAll();
+        showEditForm = false;
     }
 
+    // ========== DELETE ==========
     private async Task DeleteSupplier(int id)
     {
-        if (await JSRuntime.InvokeAsync<bool>("confirm", "Delete karein?"))
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Delete this supplier?"))
         {
             await SupplierService.DeleteAsync(id);
-            await LoadSuppliers();
+            await LoadAll();
         }
     }
 
-    private void CancelForm()
+    private async Task DeletePurchase(int id)
     {
-        showForm = false;
-        newSupplier = new();
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Delete this purchase? Stock will be reversed."))
+        {
+            await PurchaseService.DeleteAsync(id);
+            await LoadAll();
+        }
     }
+
+    // ========== DETAIL VIEW ==========
+    private void ShowDetail(Purchase purchase)
+    {
+        detailPurchase = purchase;
+        showDetail = true;
+    }
+
+    private async Task PrintInvoice()
+    {
+        await JSRuntime.InvokeVoidAsync("print");
+    }
+
+    // ========== HELPERS ==========
+    private string GetPaymentBadge(string method) => method switch
+    {
+        "Cash" => "bg-green-100 text-green-800",
+        "Bank" => "bg-blue-100 text-blue-800",
+        "Credit" => "bg-yellow-100 text-yellow-800",
+        "Cheque" => "bg-purple-100 text-purple-800",
+        _ => "bg-gray-100 text-gray-800"
+    };
 }

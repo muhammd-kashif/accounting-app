@@ -15,6 +15,8 @@ namespace AccountingApp.Models
         [EmailAddress]
         public string Email { get; set; } = string.Empty;
 
+        public string Address { get; set; } = string.Empty;
+
         public decimal OpeningBalance { get; set; } = 0;
 
         public DateTime CreatedDate { get; set; } = DateTime.Now;
@@ -24,3 +26,5 @@ namespace AccountingApp.Models
         public int UserId { get; set; }
     }
 }
+
+

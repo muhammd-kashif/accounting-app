@@ -1,0 +1,340 @@
+@page "/products"
+@rendermode InteractiveServer
+@using AccountingApp.Services
+@using AccountingApp.Models
+@inject IProductService ProductService
+@inject IJSRuntime JSRuntime
+
+<div class="p-4 md:p-8 bg-gray-100 min-h-screen">
+    <div class="mb-6 md:mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        <h1 class="text-4xl font-bold text-gray-800">📦 Products & Services</h1>
+        <button @onclick="OpenAddForm" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg w-full md:w-auto">
+            ➕ New Item
+        </button>
+    </div>
+
+    <!-- Low Stock Alert -->
+    @if (lowStockProducts != null && lowStockProducts.Any())
+    {
+        <div class="mb-6 bg-yellow-50 border border-yellow-300 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-yellow-800 mb-2">⚠️ Low Stock Alert</h3>
+            <div class="flex flex-wrap gap-2">
+                @foreach (var p in lowStockProducts)
+                {
+                    <span class="bg-yellow-200 text-yellow-900 px-3 py-1 rounded-full text-sm font-medium">
+                        @p.ItemName — @p.StockQuantity left
+                    </span>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Add/Edit Modal -->
+    @if (showForm)
+    {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @onclick="CloseForm" @onclick:stopPropagation="false">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto" @onclick:stopPropagation="true">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-semibold">@(isEditing ? "✏️ Edit Item" : "➕ Add New Item")</h2>
+                    <button @onclick="CloseForm" class="text-gray-500 hover:text-gray-700 text-xl font-bold">✖</button>
+                </div>
+
+                @if (!string.IsNullOrEmpty(formError))
+                {
+                    <div class="bg-red-50 border border-red-300 text-red-700 px-4 py-2 rounded-lg mb-4 text-sm">@formError</div>
+                }
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Item Name *</label>
+                        <input type="text" @bind="formName" placeholder="e.g. Ball Pen" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-300 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Item Type</label>
+                        <select @bind="formType" class="w-full px-4 py-2 border rounded-lg">
+                            <option value="Inventory">Inventory (Stock Track)</option>
+                            <option value="Non-Inventory">Non-Inventory</option>
+                            <option value="Service">Service</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">SKU / Code</label>
+                        <input type="text" @bind="formSKU" placeholder="e.g. BP-001" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Purchase Price (Cost)</label>
+                        <input type="number" step="0.01" @bind="formPurchasePrice" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Sale Price</label>
+                        <input type="number" step="0.01" @bind="formSalePrice" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Stock Quantity</label>
+                        <input type="number" @bind="formStock" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Reorder Level</label>
+                        <input type="number" @bind="formReorder" class="w-full px-4 py-2 border rounded-lg">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea @bind="formDescription" placeholder="Item description..." rows="2" class="w-full px-4 py-2 border rounded-lg"></textarea>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <button @onclick="CloseForm" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg">
+                        Cancel
+                    </button>
+                    <button @onclick="HandleSave" disabled="@isSaving" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg disabled:opacity-50">
+                        @(isSaving ? "Saving..." : "Save")
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg shadow p-4 text-center">
+            <p class="text-sm text-gray-500">Total Items</p>
+            <p class="text-2xl font-bold text-indigo-600">@products.Count</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 text-center">
+            <p class="text-sm text-gray-500">Total Stock</p>
+            <p class="text-2xl font-bold text-green-600">@products.Sum(p => p.StockQuantity)</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 text-center">
+            <p class="text-sm text-gray-500">Stock Value (Cost)</p>
+            <p class="text-2xl font-bold text-blue-600">@products.Sum(p => p.PurchasePrice * p.StockQuantity).ToString("C")</p>
+        </div>
+        <div class="bg-white rounded-lg shadow p-4 text-center">
+            <p class="text-sm text-gray-500">Stock Value (Sale)</p>
+            <p class="text-2xl font-bold text-orange-600">@products.Sum(p => p.SalePrice * p.StockQuantity).ToString("C")</p>
+        </div>
+    </div>
+
+    <!-- Products Table -->
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[900px]">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-semibold">Item Name</th>
+                        <th class="px-4 py-3 text-left font-semibold">Type</th>
+                        <th class="px-4 py-3 text-left font-semibold">SKU</th>
+                        <th class="px-4 py-3 text-right font-semibold">Cost Price</th>
+                        <th class="px-4 py-3 text-right font-semibold">Sale Price</th>
+                        <th class="px-4 py-3 text-right font-semibold">Stock</th>
+                        <th class="px-4 py-3 text-center font-semibold">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!products.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="px-4 py-8 text-center text-gray-400">
+                                No items yet. Click "New Item" to add your first product.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var product in products)
+                    {
+                        var pid = product.Id;
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="px-4 py-3 font-semibold">@product.ItemName</td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 rounded text-xs font-medium @GetTypeBadge(product.ItemType)">
+                                    @product.ItemType
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-gray-500">@product.SKU</td>
+                            <td class="px-4 py-3 text-right">@product.PurchasePrice.ToString("C")</td>
+                            <td class="px-4 py-3 text-right text-green-600 font-semibold">@product.SalePrice.ToString("C")</td>
+                            <td class="px-4 py-3 text-right">
+                                <span class="@(product.StockQuantity <= product.ReorderLevel ? "text-red-600 font-bold" : "text-gray-800")">
+                                    @product.StockQuantity
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                                <button @onclick="() => OpenEditForm(pid)" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded mr-1 text-sm">
+                                    ✏️ Edit
+                                </button>
+                                <button @onclick="() => HandleDelete(pid)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
+                                    🗑️ Delete
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Product> products = new();
+    private List<Product> lowStockProducts = new();
+    private bool showForm = false;
+    private bool isEditing = false;
+    private bool isSaving = false;
+    private int editingId = 0;
+    private int currentUserId = 1;
+    private string formError = string.Empty;
+
+    // Form fields (separate from model to avoid binding issues)
+    private string formName = string.Empty;
+    private string formType = "Inventory";
+    private string formSKU = string.Empty;
+    private string formDescription = string.Empty;
+    private decimal formPurchasePrice = 0;
+    private decimal formSalePrice = 0;
+    private int formStock = 0;
+    private int formReorder = 10;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        try
+        {
+            products = await ProductService.GetAllAsync(currentUserId);
+            lowStockProducts = await ProductService.GetLowStockAsync(currentUserId);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"LoadProducts Error: {ex.Message}");
+        }
+    }
+
+    private void OpenAddForm()
+    {
+        isEditing = false;
+        editingId = 0;
+        formName = string.Empty;
+        formType = "Inventory";
+        formSKU = string.Empty;
+        formDescription = string.Empty;
+        formPurchasePrice = 0;
+        formSalePrice = 0;
+        formStock = 0;
+        formReorder = 10;
+        formError = string.Empty;
+        showForm = true;
+    }
+
+    private void OpenEditForm(int productId)
+    {
+        var product = products.FirstOrDefault(p => p.Id == productId);
+        if (product == null) return;
+
+        isEditing = true;
+        editingId = product.Id;
+        formName = product.ItemName;
+        formType = product.ItemType;
+        formSKU = product.SKU;
+        formDescription = product.Description;
+        formPurchasePrice = product.PurchasePrice;
+        formSalePrice = product.SalePrice;
+        formStock = product.StockQuantity;
+        formReorder = product.ReorderLevel;
+        formError = string.Empty;
+        showForm = true;
+    }
+
+    private async Task HandleSave()
+    {
+        formError = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(formName))
+        {
+            formError = "Item name is required!";
+            return;
+        }
+
+        isSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            if (isEditing)
+            {
+                var product = new Product
+                {
+                    Id = editingId,
+                    ItemName = formName.Trim(),
+                    ItemType = formType,
+                    SKU = formSKU,
+                    Description = formDescription,
+                    PurchasePrice = formPurchasePrice,
+                    SalePrice = formSalePrice,
+                    StockQuantity = formStock,
+                    ReorderLevel = formReorder,
+                    UserId = currentUserId
+                };
+                await ProductService.UpdateAsync(product);
+            }
+            else
+            {
+                var product = new Product
+                {
+                    ItemName = formName.Trim(),
+                    ItemType = formType,
+                    SKU = formSKU,
+                    Description = formDescription,
+                    PurchasePrice = formPurchasePrice,
+                    SalePrice = formSalePrice,
+                    StockQuantity = formStock,
+                    ReorderLevel = formReorder,
+                    UserId = currentUserId
+                };
+                await ProductService.AddAsync(product);
+            }
+
+            await LoadProducts();
+            showForm = false;
+        }
+        catch (Exception ex)
+        {
+            formError = $"Error saving: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task HandleDelete(int productId)
+    {
+        try
+        {
+            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this item?");
+            if (!confirmed) return;
+
+            await ProductService.DeleteAsync(productId);
+            await LoadProducts();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Cannot delete: This item may be used in purchases. {ex.Message}");
+        }
+    }
+
+    private void CloseForm()
+    {
+        showForm = false;
+        formError = string.Empty;
+    }
+
+    private string GetTypeBadge(string type) => type switch
+    {
+        "Inventory" => "bg-blue-100 text-blue-800",
+        "Non-Inventory" => "bg-gray-100 text-gray-800",
+        "Service" => "bg-purple-100 text-purple-800",
+        _ => "bg-gray-100 text-gray-800"
+    };
+}
