@@ -27,10 +27,13 @@ else
                 <button @onclick="PrintInvoice" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg">
                     🖨️ Print
                 </button>
-                <button @onclick="DownloadPdf" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg">
+                <button @onclick="DownloadPdf" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-all">
                     📄 Download PDF
                 </button>
-                <button @onclick="GoBack" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg">
+                <button @onclick="ShowEditModal" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-all">
+                    ✏️ Edit Details
+                </button>
+                <button @onclick="GoBack" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-all">
                     ← Back
                 </button>
             </div>
@@ -210,6 +213,56 @@ else
     </div>
 }
 
+@* Edit Modal *@
+@if (showEditModal)
+{
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto print:hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 transform transition-all">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Edit Invoice Details</h2>
+                <button @onclick="CloseEditModal" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <span class="text-3xl">×</span>
+                </button>
+            </div>
+
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-sm font-bold text-gray-500 uppercase mb-2">Amount Paid (Rs.)</label>
+                    <input type="number" @bind="editSale.PaidAmount" min="0" step="0.01" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-semibold text-lg">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-400 uppercase mb-2">Payment Type</label>
+                        <select @bind="editSale.PaymentType" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                            <option value="Cash">💵 Cash</option>
+                            <option value="Bank">🏦 Bank</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-400 uppercase mb-2">Due Date</label>
+                        <input type="date" @bind="editSale.PaymentDueDate" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-400 uppercase mb-2">Internal Notes</label>
+                    <textarea @bind="editSale.Notes" rows="3" placeholder="Add any revisions or remarks..." class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-8">
+                <button @onclick="CloseEditModal" class="px-6 py-3 text-gray-500 font-bold hover:text-gray-700 transition-colors">
+                    Cancel
+                </button>
+                <button @onclick="UpdateInvoice" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-all hover:scale-105">
+                    💾 Update Invoice
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
 <style>
     @@media print {
         body {
@@ -229,6 +282,8 @@ else
     public int SaleId { get; set; }
 
     private Invoice? invoice;
+    private Sale editSale = new();
+    private bool showEditModal = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -285,5 +340,48 @@ else
     private void GoBack()
     {
         Navigation.NavigateTo("/customers");
+    }
+
+    private void ShowEditModal()
+    {
+        if (invoice == null) return;
+        
+        editSale = new Sale
+        {
+            Id = invoice.Sale.Id,
+            SaleNumber = invoice.Sale.SaleNumber,
+            SaleDate = invoice.Sale.SaleDate,
+            CustomerId = invoice.Sale.CustomerId,
+            TotalAmount = invoice.Sale.TotalAmount,
+            PaidAmount = invoice.Sale.PaidAmount,
+            RemainingAmount = invoice.Sale.RemainingAmount,
+            PaymentType = invoice.Sale.PaymentType,
+            PaymentDueDate = invoice.Sale.PaymentDueDate,
+            Notes = invoice.Sale.Notes,
+            UserId = invoice.Sale.UserId
+        };
+        showEditModal = true;
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+    }
+
+    private async Task UpdateInvoice()
+    {
+        if (invoice == null) return;
+
+        try
+        {
+            await SaleService.UpdateAsync(editSale);
+            await LoadInvoice(); // Refresh data
+            showEditModal = false;
+            await JSRuntime.InvokeVoidAsync("alert", "Invoice updated successfully! Changes have been synced with the income ledger.");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error updating invoice: {ex.Message}");
+        }
     }
 }

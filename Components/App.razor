@@ -30,108 +30,148 @@
         window.generateInvoicePdf = (fileName, docContent) => {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
+            const pageWidth = 210;
+            const pageHeight = 297;
+            const margin = 15;
             
-            // Header Section
-            doc.setFillColor(37, 99, 235); // Blue-600
-            doc.rect(0, 0, 210, 40, 'F');
+            // --- Header Section ---
+            doc.setFillColor(30, 41, 59); // Slate-800 (Premium Dark)
+            doc.rect(0, 0, pageWidth, 45, 'F');
             
-            doc.setFontSize(28);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(32);
             doc.setTextColor(255, 255, 255);
-            doc.setFont(undefined, 'bold');
-            doc.text("INVOICE", 14, 28);
+            doc.text("INVOICE", margin, 28);
             
             doc.setFontSize(10);
-            doc.setFont(undefined, 'normal');
-            doc.text("Bookshop & Stationary", 196, 15, { align: "right" });
-            doc.text("123 Main Street, City", 196, 20, { align: "right" });
-            doc.text("Phone: +92 300 1234567", 196, 25, { align: "right" });
+            doc.setFont("helvetica", "normal");
+            doc.text("BOOKSHOP & STATIONARY", pageWidth - margin, 18, { align: "right" });
+            doc.text("Main Market Road, City Center", pageWidth - margin, 23, { align: "right" });
+            doc.text("Phone: +92 300 1234567 | info@bookshop.com", pageWidth - margin, 28, { align: "right" });
             
-            // Invoice Meta Info
-            doc.setTextColor(0, 0, 0);
+            // --- Decorative Line ---
+            doc.setDrawColor(79, 70, 229); // Indigo-600
+            doc.setLineWidth(1.5);
+            doc.line(margin, 35, margin + 40, 35);
+
+            // --- Billing & Meta Info ---
+            doc.setTextColor(30, 41, 59);
+            
+            // Bill To Box
+            doc.setFont("helvetica", "bold");
             doc.setFontSize(10);
-            doc.setFont(undefined, 'bold');
-            doc.text("INVOICE DETAILS", 140, 55);
-            doc.setFont(undefined, 'normal');
-            doc.text(`Invoice #: ${docContent.invoiceNum}`, 140, 62);
-            doc.text(`Sale #:    ${docContent.saleNum}`, 140, 67);
-            doc.text(`Date:      ${docContent.date}`, 140, 72);
-            if (docContent.dueDate) {
-                doc.setTextColor(220, 38, 38);
-                doc.text(`Due Date:  ${docContent.dueDate}`, 140, 77);
-                doc.setTextColor(0, 0, 0);
-            }
-            doc.text(`Payment:   ${docContent.paymentType}`, 140, 82);
-            
-            // Bill To Section
-            doc.setFont(undefined, 'bold');
-            doc.text("BILL TO", 14, 55);
-            doc.setFontSize(12);
-            doc.text(docContent.customerName, 14, 62);
+            doc.text("BILL TO", margin, 60);
+            doc.setFontSize(14);
+            doc.text(docContent.customerName || "Walking Customer", margin, 68);
             doc.setFontSize(10);
-            doc.setFont(undefined, 'normal');
-            if (docContent.customerPhone) doc.text(`📞 ${docContent.customerPhone}`, 14, 68);
-            if (docContent.customerAddress) doc.text(`📍 ${docContent.customerAddress}`, 14, 74);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(71, 85, 105); // Gray-600
+            if (docContent.customerPhone) doc.text(`Phone: ${docContent.customerPhone}`, margin, 74);
+            if (docContent.customerAddress) doc.text(`Address: ${docContent.customerAddress}`, margin, 80);
+
+            // Details Box
+            doc.setTextColor(30, 41, 59);
+            doc.setFont("helvetica", "bold");
+            doc.text("INVOICE DETAILS", 130, 60);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
             
-            // Items Table
+            const detailX = 130;
+            const detailValueX = 195;
+            let currentMetaY = 68;
+            
+            const addMetaRow = (label, value, color) => {
+                doc.setTextColor(71, 85, 105);
+                doc.text(label, detailX, currentMetaY);
+                if (color) doc.setTextColor(color[0], color[1], color[2]);
+                else doc.setTextColor(30, 41, 59);
+                doc.text(value, detailValueX, currentMetaY, { align: "right" });
+                currentMetaY += 6;
+            };
+
+            addMetaRow("Invoice Date:", docContent.date);
+            addMetaRow("Invoice #:", docContent.invoiceNum);
+            addMetaRow("Sale #:", docContent.saleNum);
+            addMetaRow("Payment:", docContent.paymentType);
+            if (docContent.dueDate) addMetaRow("Due Date:", docContent.dueDate, [220, 38, 38]);
+
+            // --- Items Table ---
             doc.autoTable({
                 startY: 95,
-                head: [['#', 'Item Desciption', 'Qty', 'Unit Price', 'Total']],
-                body: docContent.items.map((i, index) => [index + 1, i.name, i.qty, i.price, i.total]),
-                theme: 'grid',
-                headStyles: { fillColor: [37, 99, 235], fontSize: 10, halign: 'center' },
+                head: [['#', 'Description', 'Qty', 'Unit Price', 'Total']],
+                body: docContent.items.map((i, idx) => [
+                    idx + 1, 
+                    i.name, 
+                    i.qty, 
+                    `Rs. ${i.price}`, 
+                    `Rs. ${i.total}`
+                ]),
+                theme: 'striped',
+                headStyles: { fillColor: [79, 70, 229], fontSize: 10, halign: 'center' },
                 columnStyles: {
                     0: { halign: 'center', cellWidth: 10 },
-                    2: { halign: 'center' },
-                    3: { halign: 'right' },
-                    4: { halign: 'right' }
-                }
+                    2: { halign: 'center', cellWidth: 15 },
+                    3: { halign: 'right', cellWidth: 35 },
+                    4: { halign: 'right', cellWidth: 35 }
+                },
+                styles: { fontSize: 9, cellPadding: 4 }
             });
-            
-            // Summary Section
-            const finalY = doc.lastAutoTable.finalY + 15;
-            const rightEdge = 196;
-            const labelX = 130;
-            
-            doc.setFontSize(11);
-            doc.text(`Subtotal:`, labelX, finalY);
-            doc.text(`Rs. ${docContent.subtotal}`, rightEdge, finalY, { align: "right" });
-            
-            doc.text(`Amount Paid:`, labelX, finalY + 8);
-            doc.setTextColor(22, 163, 74);
-            doc.text(`Rs. ${docContent.paid}`, rightEdge, finalY + 8, { align: "right" });
-            doc.setTextColor(0, 0, 0);
-            
-            // Fix: Safe numeric parsing for Remaining Amount
+
+            // --- Summary Section ---
+            let finalY = doc.lastAutoTable.finalY + 15;
+            if (finalY > 240) { doc.addPage(); finalY = 25; }
+
+            const summaryWidth = 70;
+            const summaryX = pageWidth - margin - summaryWidth;
+            const rightAlignX = pageWidth - margin;
+
+            doc.setFontSize(10);
+            doc.setTextColor(71, 85, 105);
+            doc.text("Subtotal:", summaryX, finalY);
+            doc.setTextColor(30, 41, 59);
+            doc.text(`Rs. ${docContent.subtotal}`, rightAlignX, finalY, { align: "right" });
+
+            doc.setTextColor(71, 85, 105);
+            doc.text("Amount Paid:", summaryX, finalY + 8);
+            doc.setTextColor(22, 163, 74); // Green-600
+            doc.text(`Rs. ${docContent.paid}`, rightAlignX, finalY + 8, { align: "right" });
+
             const remStr = (docContent.remaining || "0").toString().replace(/[^0-9.]/g, "");
             const remVal = parseFloat(remStr);
             
             if (remVal > 0.01) {
-                doc.setFont(undefined, 'bold');
-                doc.text(`Due Payment:`, labelX, finalY + 16);
-                doc.setTextColor(220, 38, 38);
-                doc.text(`Rs. ${docContent.remaining}`, rightEdge, finalY + 16, { align: "right" });
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(220, 38, 38); // Red-600
+                doc.text("Due Payment:", summaryX, finalY + 16);
+                doc.text(`Rs. ${docContent.remaining}`, rightAlignX, finalY + 16, { align: "right" });
             } else {
-                doc.setFont(undefined, 'bold');
+                doc.setFont("helvetica", "bold");
                 doc.setTextColor(22, 163, 74);
-                doc.text("✓ PAID IN FULL", rightEdge, finalY + 16, { align: "right" });
+                doc.text("PAID IN FULL", rightAlignX, finalY + 16, { align: "right" });
             }
+
+            // Grand Total Highlight
+            doc.setFillColor(248, 250, 252); // Slate-50
+            doc.rect(summaryX - 5, finalY + 22, summaryWidth + 5, 15, 'F');
+            doc.setDrawColor(226, 232, 240); // Slate-200
+            doc.rect(summaryX - 5, finalY + 22, summaryWidth + 5, 15, 'S');
+
+            doc.setFontSize(12);
+            doc.setTextColor(79, 70, 229); // Indigo-600
+            doc.text("Grand Total:", summaryX, finalY + 32);
+            doc.text(`Rs. ${docContent.total}`, rightAlignX, finalY + 32, { align: "right" });
+
+            // --- Footer ---
+            doc.setFontSize(8);
+            doc.setTextColor(148, 163, 184); // Slate-400
+            doc.setFont("helvetica", "normal");
+            doc.text("TERMS AND CONDITIONS", margin, 270);
+            doc.text("1. All items are sold as-is. 2. No returns after 7 days. 3. Thank you for your support!", margin, 275);
             
-            doc.setTextColor(0, 0, 0);
-            const totalY = finalY + 28;
-            doc.setFillColor(243, 244, 246);
-            doc.rect(labelX - 2, totalY - 8, 70, 12, 'F');
-            doc.setFontSize(14);
-            doc.setFont(undefined, 'bold');
-            doc.text(`Grand Total:`, labelX, totalY);
-            doc.text(`Rs. ${docContent.total}`, rightEdge, totalY, { align: "right" });
-            
-            // Footer
             doc.setFontSize(9);
-            doc.setFont(undefined, 'normal');
-            doc.setTextColor(107, 114, 128);
-            doc.text("Thank you for your business! Please visit us again.", 105, 280, { align: "center" });
-            doc.text("Software powered by AccountingApp", 105, 285, { align: "center" });
-            
+            doc.setTextColor(71, 85, 105);
+            doc.text("Software Powered by AccountingApp Project", pageWidth / 2, pageHeight - 10, { align: "center" });
+
             doc.save(fileName);
         };
 

@@ -889,7 +889,6 @@ namespace AccountingApp.Migrations
                 {
                     b.Navigation("SaleItems");
                 });
-                });
 #pragma warning restore 612, 618
         }
     }

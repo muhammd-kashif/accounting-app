@@ -3,15 +3,74 @@
 @using AccountingApp.Services
 @using AccountingApp.Models
 @inject IIncomeService IncomeService
+@inject IInvoiceService InvoiceService
 @inject ICustomerService CustomerService
 @inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
 
 <div class="p-4 md:p-8 bg-gray-100 min-h-screen">
     <div class="mb-6 md:mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-        <h1 class="text-4xl font-bold text-gray-800">💰 Income / Sales</h1>
-        <button @onclick="ShowAddForm" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full md:w-auto">
-            ➕ Add Income
+        <h1 class="text-4xl font-bold text-gray-800">💰 Income Ledger</h1>
+        <button @onclick="ShowAddForm" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition-all hover:scale-105">
+            ➕ Add Manual Income
         </button>
+    </div>
+
+    @* Summary Cards *@
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-blue-500">
+            <p class="text-sm font-semibold text-gray-500 uppercase">Total Income</p>
+            <h3 class="text-3xl font-bold text-gray-800">Rs. @TotalIncome.ToString("N2")</h3>
+            <p class="text-xs text-gray-400 mt-2">Aggregated from filters</p>
+        </div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-green-500">
+            <p class="text-sm font-semibold text-gray-500 uppercase">Cash Collection</p>
+            <h3 class="text-3xl font-bold text-green-600">Rs. @CashIncome.ToString("N2")</h3>
+            <p class="text-xs text-gray-400 mt-2">Physical cash in hand</p>
+        </div>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-purple-500">
+            <p class="text-sm font-semibold text-gray-500 uppercase">Bank Transfers</p>
+            <h3 class="text-3xl font-bold text-purple-600">Rs. @BankIncome.ToString("N2")</h3>
+            <p class="text-xs text-gray-400 mt-2">Digital payments received</p>
+        </div>
+    </div>
+
+    @* Advanced Filters *@
+    <div class="bg-white p-5 rounded-2xl shadow-sm mb-8 flex flex-wrap gap-4 items-end border border-gray-100">
+        <div class="flex-1 min-w-[250px]">
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Search Customer / Description</label>
+            <div class="relative">
+                <input type="text" @bind="searchText" @bind:event="oninput" placeholder="Search accounts..." class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                <span class="absolute left-3 top-3.5 text-gray-400">🔍</span>
+            </div>
+        </div>
+        <div class="w-full md:w-48">
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">From Date</label>
+            <input type="date" @bind="startDate" class="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="w-full md:w-48">
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">To Date</label>
+            <input type="date" @bind="endDate" class="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="w-full md:w-40">
+            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Method</label>
+            <select @bind="paymentFilter" class="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">All Types</option>
+                <option value="Cash">💵 Cash</option>
+                <option value="Bank">🏦 Bank</option>
+            </select>
+        </div>
+        <div class="flex gap-2">
+            <button @onclick="ResetFilters" class="px-6 py-3 text-gray-500 hover:text-blue-600 font-bold transition-colors">
+                Reset
+            </button>
+            <button @onclick="ExportToCsv" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 shadow-md">
+                📊 CSV
+            </button>
+            <button @onclick="ExportToPdf" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 shadow-md">
+                📄 PDF
+            </button>
+        </div>
     </div>
 
     <!-- Add/Edit Modal -->
@@ -72,17 +131,35 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var income in incomes)
+                @foreach (var income in FilteredIncomes)
                 {
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="px-6 py-4">@income.Date?.ToString("yyyy-MM-dd")</td>
-                        <td class="px-6 py-4">@income.Customer?.Name</td>
-                        <td class="px-6 py-4 font-semibold text-green-600">@income.Amount.ToString("C")</td>
-                        <td class="px-6 py-4">@income.PaymentType</td>
-                        <td class="px-6 py-4">@income.Description</td>
+                    <tr class="border-b hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4">@income.Date?.ToString("dd MMM yyyy")</td>
                         <td class="px-6 py-4">
-                            <button @onclick="() => EditIncome(income)" class="bg-blue-500 text-white px-3 py-1 rounded mr-2">✏️</button>
-                            <button @onclick="() => DeleteIncome(income.Id)" class="bg-red-500 text-white px-3 py-1 rounded">🗑️</button>
+                            <div class="font-bold text-gray-700">@income.Customer?.Name</div>
+                            <div class="text-xs text-gray-400">ID: #C-@income.CustomerId</div>
+                        </td>
+                        <td class="px-6 py-4 font-bold text-lg text-green-600">Rs. @income.Amount.ToString("N2")</td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold uppercase @(income.PaymentType == "Cash" ? "bg-green-100 text-green-700" : "bg-purple-100 text-purple-700")">
+                                @(income.PaymentType == "Cash" ? "💵 Cash" : "🏦 Bank")
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-gray-500 italic max-w-xs truncate">@income.Description</td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                @if (income.SaleId != null)
+                                {
+                                    <button @onclick="() => ViewInvoice(income.SaleId.Value)" class="bg-blue-100 text-blue-600 px-3 py-1 rounded-lg text-xs font-bold hover:bg-blue-200" title="View Linked Invoice">
+                                        🔗 View Invoice
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button @onclick="() => EditIncome(income)" class="text-blue-500 hover:bg-blue-50 p-2 rounded-lg transition-colors" title="Edit Manual Entry">✏️</button>
+                                    <button @onclick="() => DeleteIncome(income.Id)" class="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors" title="Delete Manual Entry">🗑️</button>
+                                }
+                            </div>
                         </td>
                     </tr>
                 }
@@ -97,8 +174,29 @@
     private List<Customer> customers = new();
     private Income newIncome = new();
     private bool showForm = false;
+    private string searchText = "";
+    private DateTime? startDate;
+    private DateTime? endDate;
+    private string paymentFilter = "";
     private bool isEditing = false;
     private int currentUserId = 1;
+
+    // Computed Properties for Dashboard
+    private List<Income> FilteredIncomes => incomes
+        .Where(i => 
+            (string.IsNullOrWhiteSpace(searchText) || 
+             (i.Customer?.Name?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) || 
+             (i.Description?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+            (!startDate.HasValue || (i.Date.HasValue && i.Date.Value.Date >= startDate.Value.Date)) &&
+            (!endDate.HasValue || (i.Date.HasValue && i.Date.Value.Date <= endDate.Value.Date)) &&
+            (string.IsNullOrWhiteSpace(paymentFilter) || i.PaymentType == paymentFilter)
+        )
+        .OrderByDescending(i => i.Date)
+        .ToList();
+
+    private decimal TotalIncome => FilteredIncomes.Sum(i => i.Amount);
+    private decimal CashIncome => FilteredIncomes.Where(i => i.PaymentType == "Cash").Sum(i => i.Amount);
+    private decimal BankIncome => FilteredIncomes.Where(i => i.PaymentType == "Bank").Sum(i => i.Amount);
 
     protected override async Task OnInitializedAsync()
     {
@@ -152,6 +250,50 @@
         }
         await LoadData();
         CancelForm();
+    }
+
+    private void ResetFilters()
+    {
+        searchText = "";
+        startDate = null;
+        endDate = null;
+        paymentFilter = "";
+    }
+
+    private void ViewInvoice(int saleId)
+    {
+        Navigation.NavigateTo($"/invoice/{saleId}");
+    }
+
+    private async Task ExportToPdf()
+    {
+        var headers = new string[] { "Date", "Customer", "Amount", "Type", "Description" };
+        var body = FilteredIncomes.Select(i => new string[] 
+        { 
+            i.Date?.ToString("yyyy-MM-dd") ?? "", 
+            i.Customer?.Name ?? "N/A", 
+            $"Rs. {i.Amount:N2}", 
+            i.PaymentType ?? "", 
+            i.Description ?? "" 
+        }).ToList();
+
+        var fileName = $"IncomeExport_{DateTime.Now:yyyyMMdd}.pdf";
+        await JSRuntime.InvokeVoidAsync("generateTablePdf", fileName, "Income Report", headers, body);
+    }
+
+    private async Task ExportToCsv()
+    {
+        var csv = new System.Text.StringBuilder();
+        csv.AppendLine("Date,Customer,Amount,Type,Description");
+        
+        foreach (var income in FilteredIncomes)
+        {
+            csv.AppendLine($"{income.Date:yyyy-MM-dd},{income.Customer?.Name},{income.Amount},{income.PaymentType},\"{income.Description}\"");
+        }
+
+        var fileName = $"IncomeExport_{DateTime.Now:yyyyMMdd}.csv";
+        var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", Convert.ToBase64String(bytes));
     }
 
     private async Task DeleteIncome(int id)
