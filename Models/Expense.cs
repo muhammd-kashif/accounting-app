@@ -19,6 +19,9 @@ namespace AccountingApp.Models
         public string Description { get; set; } = string.Empty;
 
         public int UserId { get; set; }
+        
+        public int? BillPaymentId { get; set; }
+        public int? PurchaseId { get; set; }
 
         public DateTime CreatedDate { get; set; } = DateTime.Now;
     }

@@ -87,6 +87,13 @@ namespace AccountingApp.Services
 
             if (bill != null)
             {
+                // Remove linked Expenses from payments
+                var paymentIds = bill.Payments.Select(p => p.Id).ToList();
+                var expenses = await _context.Expenses
+                    .Where(e => e.BillPaymentId != null && paymentIds.Contains(e.BillPaymentId.Value))
+                    .ToListAsync();
+                _context.Expenses.RemoveRange(expenses);
+
                 // Reverse stock
                 foreach (var item in bill.Items)
                 {
@@ -101,6 +108,7 @@ namespace AccountingApp.Services
         public async Task PayBillAsync(BillPayment payment)
         {
             var bill = await _context.Bills
+                .Include(b => b.Supplier)
                 .Include(b => b.Payments)
                 .FirstOrDefaultAsync(b => b.Id == payment.BillId);
 
@@ -108,6 +116,20 @@ namespace AccountingApp.Services
 
             payment.CreatedDate = DateTime.Now;
             _context.BillPayments.Add(payment);
+            await _context.SaveChangesAsync(); // Save to get Payment Id
+
+            // Create corresponding Expense record
+            var expense = new Expense
+            {
+                Date = payment.PaymentDate,
+                Category = "Bill Payment",
+                Amount = payment.Amount,
+                Description = $"Payment for Bill {bill.BillNumber} to {bill.Supplier?.SupplierName ?? "Unknown"}",
+                UserId = payment.UserId,
+                BillPaymentId = payment.Id,
+                CreatedDate = DateTime.Now
+            };
+            _context.Expenses.Add(expense);
 
             bill.PaidAmount += payment.Amount;
             if (bill.PaidAmount >= bill.TotalAmount)

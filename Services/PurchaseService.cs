@@ -51,6 +51,21 @@ namespace AccountingApp.Services
             _context.Purchases.Add(purchase);
             await _context.SaveChangesAsync();
 
+            // Create corresponding Expense record
+            var supplier = await _context.Suppliers.FindAsync(purchase.SupplierId);
+            var expense = new Expense
+            {
+                Date = purchase.Date,
+                Category = "Purchase",
+                Amount = purchase.TotalAmount,
+                Description = $"Purchase from {supplier?.SupplierName ?? "Unknown Supplier"} (Ref: {purchase.ReferenceNo})",
+                UserId = purchase.UserId,
+                PurchaseId = purchase.Id,
+                CreatedDate = DateTime.Now
+            };
+            _context.Expenses.Add(expense);
+            await _context.SaveChangesAsync();
+
             // Update stock for each item (increase stock on purchase)
             foreach (var item in purchase.Items)
             {
@@ -66,6 +81,13 @@ namespace AccountingApp.Services
 
             if (purchase != null)
             {
+                // Remove linked Expense record
+                var expense = await _context.Expenses.FirstOrDefaultAsync(e => e.PurchaseId == id);
+                if (expense != null)
+                {
+                    _context.Expenses.Remove(expense);
+                }
+
                 // Reverse stock changes
                 foreach (var item in purchase.Items)
                 {

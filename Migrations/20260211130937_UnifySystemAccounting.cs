@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace AccountingApp.Migrations
 {
     /// <inheritdoc />
-    public partial class AddProductsPurchasesBills : Migration
+    public partial class UnifySystemAccounting : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -18,53 +18,17 @@ namespace AccountingApp.Migrations
                 nullable: false,
                 defaultValue: "");
 
-            migrationBuilder.AlterColumn<DateTime>(
-                name: "CreatedDate",
-                table: "Incomes",
-                type: "datetime2",
-                nullable: true,
-                oldClrType: typeof(DateTime),
-                oldType: "datetime2");
+            migrationBuilder.AddColumn<int>(
+                name: "BillPaymentId",
+                table: "Expenses",
+                type: "int",
+                nullable: true);
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Phone",
-                table: "Customers",
-                type: "nvarchar(max)",
-                nullable: true,
-                oldClrType: typeof(string),
-                oldType: "nvarchar(max)");
-
-            migrationBuilder.AlterColumn<decimal>(
-                name: "OpeningBalance",
-                table: "Customers",
-                type: "decimal(18,2)",
-                nullable: true,
-                oldClrType: typeof(decimal),
-                oldType: "decimal(18,2)");
-
-            migrationBuilder.AlterColumn<string>(
-                name: "Email",
-                table: "Customers",
-                type: "nvarchar(max)",
-                nullable: true,
-                oldClrType: typeof(string),
-                oldType: "nvarchar(max)");
-
-            migrationBuilder.AlterColumn<DateTime>(
-                name: "CreatedDate",
-                table: "Customers",
-                type: "datetime2",
-                nullable: true,
-                oldClrType: typeof(DateTime),
-                oldType: "datetime2");
-
-            migrationBuilder.AlterColumn<decimal>(
-                name: "Balance",
-                table: "Accounts",
-                type: "decimal(18,2)",
-                nullable: true,
-                oldClrType: typeof(decimal),
-                oldType: "decimal(18,2)");
+            migrationBuilder.AddColumn<int>(
+                name: "PurchaseId",
+                table: "Expenses",
+                type: "int",
+                nullable: true);
 
             migrationBuilder.CreateTable(
                 name: "Bills",
@@ -288,65 +252,13 @@ namespace AccountingApp.Migrations
                 name: "Address",
                 table: "Suppliers");
 
-            migrationBuilder.AlterColumn<DateTime>(
-                name: "CreatedDate",
-                table: "Incomes",
-                type: "datetime2",
-                nullable: false,
-                defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                oldClrType: typeof(DateTime),
-                oldType: "datetime2",
-                oldNullable: true);
+            migrationBuilder.DropColumn(
+                name: "BillPaymentId",
+                table: "Expenses");
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Phone",
-                table: "Customers",
-                type: "nvarchar(max)",
-                nullable: false,
-                defaultValue: "",
-                oldClrType: typeof(string),
-                oldType: "nvarchar(max)",
-                oldNullable: true);
-
-            migrationBuilder.AlterColumn<decimal>(
-                name: "OpeningBalance",
-                table: "Customers",
-                type: "decimal(18,2)",
-                nullable: false,
-                defaultValue: 0m,
-                oldClrType: typeof(decimal),
-                oldType: "decimal(18,2)",
-                oldNullable: true);
-
-            migrationBuilder.AlterColumn<string>(
-                name: "Email",
-                table: "Customers",
-                type: "nvarchar(max)",
-                nullable: false,
-                defaultValue: "",
-                oldClrType: typeof(string),
-                oldType: "nvarchar(max)",
-                oldNullable: true);
-
-            migrationBuilder.AlterColumn<DateTime>(
-                name: "CreatedDate",
-                table: "Customers",
-                type: "datetime2",
-                nullable: false,
-                defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                oldClrType: typeof(DateTime),
-                oldType: "datetime2",
-                oldNullable: true);
-
-            migrationBuilder.AlterColumn<decimal>(
-                name: "Balance",
-                table: "Accounts",
-                type: "decimal(18,2)",
-                nullable: false,
-                defaultValue: 0m,
-                oldClrType: typeof(decimal),
-                oldType: "decimal(18,2)",
-                oldNullable: true);
+            migrationBuilder.DropColumn(
+                name: "PurchaseId",
+                table: "Expenses");
         }
     }
 }

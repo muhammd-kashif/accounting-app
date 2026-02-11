@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AccountingApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260211192633_AddProductsPurchasesBills")]
-    partial class AddProductsPurchasesBills
+    [Migration("20260211130937_UnifySystemAccounting")]
+    partial class UnifySystemAccounting
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -185,6 +185,9 @@ namespace AccountingApp.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Address")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime?>("CreatedDate")
                         .HasColumnType("datetime2");
 
@@ -223,6 +226,9 @@ namespace AccountingApp.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int?>("BillPaymentId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Category")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -236,6 +242,9 @@ namespace AccountingApp.Migrations
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("PurchaseId")
+                        .HasColumnType("int");
 
                     b.Property<int>("UserId")
                         .HasColumnType("int");
@@ -273,6 +282,9 @@ namespace AccountingApp.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("SaleId")
+                        .HasColumnType("int");
+
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
@@ -281,6 +293,224 @@ namespace AccountingApp.Migrations
                     b.HasIndex("CustomerId");
 
                     b.ToTable("Incomes");
+                });
+
+            modelBuilder.Entity("AccountingApp.Models.Invoice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("GeneratedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("InvoiceDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("PaymentDueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SaleId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SaleId");
+
+                    b.ToTable("Invoices");
+                });
+
+            modelBuilder.Entity("AccountingApp.Models.Item", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Category")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("StockQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Items");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Category = "Notebooks",
+                            CreatedDate = new DateTime(2026, 2, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "A4 size notebook with 200 pages",
+                            Name = "Notebook A4",
+                            Price = 150m,
+                            StockQuantity = 100
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Category = "Notebooks",
+                            CreatedDate = new DateTime(2026, 2, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "B5 size notebook with 150 pages",
+                            Name = "Notebook B5",
+                            Price = 100m,
+                            StockQuantity = 150
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Category = "Pens",
+                            CreatedDate = new DateTime(2026, 2, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Blue ballpoint pen",
+                            Name = "Pen Blue",
+                            Price = 20m,
+                            StockQuantity = 500
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Category = "Pens",
+                            CreatedDate = new DateTime(2026, 2, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Black ballpoint pen",
+                            Name = "Pen Black",
+                            Price = 20m,
+                            StockQuantity = 500
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Category = "Pens",
+                            CreatedDate = new DateTime(2026, 2, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Red ballpoint pen",
+                            Name = "Pen Red",
+                            Price = 20m,
+                            StockQuantity = 300
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Category = "Pencils",
+                            CreatedDate = new DateTime(2026, 2, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "HB grade pencil",
+                            Name = "Pencil HB",
+                            Price = 10m,
+                            StockQuantity = 400
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Category = "Accessories",
+                            CreatedDate = new DateTime(2026, 2, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "White eraser",
+                            Name = "Eraser",
+                            Price = 15m,
+                            StockQuantity = 300
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Category = "Accessories",
+                            CreatedDate = new DateTime(2026, 2, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Metal sharpener",
+                            Name = "Sharpener",
+                            Price = 25m,
+                            StockQuantity = 250
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Category = "Accessories",
+                            CreatedDate = new DateTime(2026, 2, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "30cm plastic ruler",
+                            Name = "Ruler 30cm",
+                            Price = 30m,
+                            StockQuantity = 200
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Category = "Markers",
+                            CreatedDate = new DateTime(2026, 2, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Set of 12 colored markers",
+                            Name = "Marker Set",
+                            Price = 200m,
+                            StockQuantity = 80
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Category = "Office Supplies",
+                            CreatedDate = new DateTime(2026, 2, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Standard stapler with staples",
+                            Name = "Stapler",
+                            Price = 250m,
+                            StockQuantity = 50
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Category = "Markers",
+                            CreatedDate = new DateTime(2026, 2, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Yellow highlighter",
+                            Name = "Highlighter Yellow",
+                            Price = 35m,
+                            StockQuantity = 200
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Category = "Markers",
+                            CreatedDate = new DateTime(2026, 2, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Pink highlighter",
+                            Name = "Highlighter Pink",
+                            Price = 35m,
+                            StockQuantity = 200
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Category = "Office Supplies",
+                            CreatedDate = new DateTime(2026, 2, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Stainless steel scissors",
+                            Name = "Scissors",
+                            Price = 120m,
+                            StockQuantity = 100
+                        },
+                        new
+                        {
+                            Id = 15,
+                            Category = "Adhesives",
+                            CreatedDate = new DateTime(2026, 2, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "40g glue stick",
+                            Name = "Glue Stick",
+                            Price = 40m,
+                            StockQuantity = 180
+                        });
                 });
 
             modelBuilder.Entity("AccountingApp.Models.Product", b =>
@@ -407,6 +637,91 @@ namespace AccountingApp.Migrations
                     b.ToTable("PurchaseItems");
                 });
 
+            modelBuilder.Entity("AccountingApp.Models.Sale", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("PaidAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("PaymentDueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PaymentType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("RemainingAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("SaleDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SaleNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.ToTable("Sales");
+                });
+
+            modelBuilder.Entity("AccountingApp.Models.SaleItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SaleId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ItemId");
+
+                    b.HasIndex("SaleId");
+
+                    b.ToTable("SaleItems");
+                });
+
             modelBuilder.Entity("AccountingApp.Models.Supplier", b =>
                 {
                     b.Property<int>("Id")
@@ -531,6 +846,17 @@ namespace AccountingApp.Migrations
                     b.Navigation("Customer");
                 });
 
+            modelBuilder.Entity("AccountingApp.Models.Invoice", b =>
+                {
+                    b.HasOne("AccountingApp.Models.Sale", "Sale")
+                        .WithMany()
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Sale");
+                });
+
             modelBuilder.Entity("AccountingApp.Models.Purchase", b =>
                 {
                     b.HasOne("AccountingApp.Models.Supplier", "Supplier")
@@ -561,6 +887,36 @@ namespace AccountingApp.Migrations
                     b.Navigation("Purchase");
                 });
 
+            modelBuilder.Entity("AccountingApp.Models.Sale", b =>
+                {
+                    b.HasOne("AccountingApp.Models.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("AccountingApp.Models.SaleItem", b =>
+                {
+                    b.HasOne("AccountingApp.Models.Item", "Item")
+                        .WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AccountingApp.Models.Sale", "Sale")
+                        .WithMany("SaleItems")
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Item");
+
+                    b.Navigation("Sale");
+                });
+
             modelBuilder.Entity("AccountingApp.Models.Bill", b =>
                 {
                     b.Navigation("Items");
@@ -571,6 +927,11 @@ namespace AccountingApp.Migrations
             modelBuilder.Entity("AccountingApp.Models.Purchase", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("AccountingApp.Models.Sale", b =>
+                {
+                    b.Navigation("SaleItems");
                 });
 #pragma warning restore 612, 618
         }
