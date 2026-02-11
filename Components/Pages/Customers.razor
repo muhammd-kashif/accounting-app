@@ -3,143 +3,634 @@
 @using AccountingApp.Services
 @using AccountingApp.Models
 @inject ICustomerService CustomerService
+@inject ISaleService SaleService
+@inject IItemService ItemService
+@inject IInvoiceService InvoiceService
 @inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
 
 <div class="p-4 md:p-8 bg-gray-100 min-h-screen">
     <div class="mb-6 md:mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-        <h1 class="text-4xl font-bold text-gray-800">👥 Customers</h1>
+        <h1 class="text-4xl font-bold text-gray-800">🛒 Customer Sales</h1>
         <button @onclick="ShowAddForm" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full md:w-auto">
-            ➕ Add Customer
+            ➕ New Sale
         </button>
     </div>
 
-    <!-- Add/Edit Modal -->
+    @* Search and Filters *@
+    <div class="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-col md:flex-row gap-4 items-end">
+        <div class="flex-1 w-full">
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Search Customer / Sale #</label>
+            <div class="relative">
+                <input type="text" @bind="searchText" @bind:event="oninput" placeholder="Search..." class="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                <span class="absolute left-3 top-2.5 text-gray-400">🔍</span>
+            </div>
+        </div>
+        <div class="w-full md:w-44">
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">From Date</label>
+            <input type="date" @bind="startDate" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+        <div class="w-full md:w-44">
+            <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">To Date</label>
+            <input type="date" @bind="endDate" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+        <button @onclick="ResetFilters" class="px-4 py-2 text-gray-600 hover:text-blue-500 font-semibold transition-colors">
+            Reset
+        </button>
+        <button @onclick="ExportToCsv" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2">
+            📊 Export CSV
+        </button>
+        <button @onclick="ExportToPdf" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2">
+            📄 Export PDF
+        </button>
+    </div>
+
+    @* Add/Edit Sale Modal *@
     @if (showForm)
     {
-        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl p-6 my-8">
                 <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-2xl font-semibold">@(isEditing ? "Edit Customer" : "Add New Customer")</h2>
+                    <h2 class="text-2xl font-semibold">@(isEditing ? "Edit Sale" : "New Sale Transaction")</h2>
                     <button @onclick="CancelForm" class="text-gray-500 hover:text-gray-700 text-xl">✖</button>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <input type="text" @bind="newCustomer.Name" placeholder="Name" class="md:col-span-2 px-4 py-2 border rounded-lg">
-                    <input type="tel" @bind="newCustomer.Phone" placeholder="Phone" class="px-4 py-2 border rounded-lg">
-                    <input type="email" @bind="newCustomer.Email" placeholder="Email" class="px-4 py-2 border rounded-lg">
-                    <input type="number" @bind="newCustomer.OpeningBalance" placeholder="Opening Balance" class="md:col-span-2 px-4 py-2 border rounded-lg">
+                <div class="space-y-4">
+                    @* Customer Information *@
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-lg mb-3">Customer Information</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="flex flex-col">
+                                <label class="text-sm font-medium mb-1">Customer Name *</label>
+                                <input type="text" @bind="newCustomer.Name" placeholder="Enter Full Name" class="px-4 py-2 border rounded-lg @(validationErrors.Contains("Name") ? "border-red-500" : "")">
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-sm font-medium mb-1">Phone Number *</label>
+                                <input type="tel" @bind="newCustomer.Phone" placeholder="03XXXXXXXXX" maxlength="11" class="px-4 py-2 border rounded-lg @(validationErrors.Contains("Phone") ? "border-red-500" : "")">
+                                <span class="text-xs text-gray-500">Exactly 11 digits starting with 03</span>
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-sm font-medium mb-1">Email Address *</label>
+                                <input type="email" @bind="newCustomer.Email" placeholder="example@domain.com" class="px-4 py-2 border rounded-lg @(validationErrors.Contains("Email") ? "border-red-500" : "")">
+                            </div>
+                            <div class="flex flex-col">
+                                <label class="text-sm font-medium mb-1">Address *</label>
+                                <input type="text" @bind="newCustomer.Address" placeholder="Full Address" class="px-4 py-2 border rounded-lg @(validationErrors.Contains("Address") ? "border-red-500" : "")">
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Sale Information *@
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-lg mb-3">Sale Information</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Sale Date *</label>
+                                <input type="date" @bind="newSale.SaleDate" class="px-4 py-2 border rounded-lg w-full @(validationErrors.Contains("Date") ? "border-red-500" : "")">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Payment Type *</label>
+                                <select @bind="newSale.PaymentType" class="px-4 py-2 border rounded-lg w-full">
+                                    <option value="Cash">Cash</option>
+                                    <option value="Bank">Bank</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Payment Due Date</label>
+                                <input type="date" @bind="newSale.PaymentDueDate" class="px-4 py-2 border rounded-lg w-full">
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Items Selection *@
+                    <div class="bg-yellow-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-lg mb-3">Items</h3>
+                        
+                        @* Add Item Row *@
+                        <div class="grid grid-cols-12 gap-2 mb-3">
+                            <div class="col-span-6">
+                                <select @bind="selectedItemId" class="px-4 py-2 border rounded-lg w-full">
+                                    <option value="0">-- Select Item --</option>
+                                    @foreach (var item in availableItems)
+                                    {
+                                        <option value="@item.Id">@item.Name - Rs. @item.Price</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-span-3">
+                                <input type="number" @bind="selectedQuantity" min="1" placeholder="Quantity" class="px-4 py-2 border rounded-lg w-full">
+                            </div>
+                            <div class="col-span-3">
+                                <button @onclick="AddItem" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg w-full">
+                                    ➕ Add
+                                </button>
+                            </div>
+                        </div>
+
+                        @* Selected Items List *@
+                        @if (selectedItems.Any())
+                        {
+                            <div class="border rounded-lg overflow-hidden">
+                                <table class="w-full">
+                                    <thead class="bg-gray-200">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left">Item</th>
+                                            <th class="px-4 py-2 text-right">Quantity</th>
+                                            <th class="px-4 py-2 text-right">Unit Price</th>
+                                            <th class="px-4 py-2 text-right">Total</th>
+                                            <th class="px-4 py-2"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in selectedItems)
+                                        {
+                                            <tr class="border-b">
+                                                <td class="px-4 py-2">@item.Item.Name</td>
+                                                <td class="px-4 py-2 text-right">@item.Quantity</td>
+                                                <td class="px-4 py-2 text-right">Rs. @item.UnitPrice.ToString("N2")</td>
+                                                <td class="px-4 py-2 text-right font-semibold">Rs. @item.TotalPrice.ToString("N2")</td>
+                                                <td class="px-4 py-2 text-right">
+                                                    <button @onclick="() => RemoveItem(item)" class="text-red-500 hover:text-red-700">
+                                                        🗑️
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot class="bg-gray-100">
+                                        <tr>
+                                            <td colspan="3" class="px-4 py-3 text-right font-bold text-lg">Grand Total:</td>
+                                            <td class="px-4 py-3 text-right font-bold text-lg text-green-600">Rs. @CalculateTotal().ToString("N2")</td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-gray-500 text-center py-4">No items added yet</p>
+                        }
+                    </div>
+
+                    @* Payment Details *@
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-lg mb-3">Payment Details</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Amount Paid</label>
+                                <input type="number" @bind="newSale.PaidAmount" min="0" step="0.01" placeholder="0.00" class="px-4 py-2 border rounded-lg w-full">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Notes/Remarks</label>
+                                <input type="text" @bind="newSale.Notes" placeholder="Optional notes" class="px-4 py-2 border rounded-lg w-full">
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="flex justify-end gap-3">
+                <div class="flex justify-end gap-3 mt-6">
                     <button @onclick="CancelForm" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-lg">
                         Cancel
                     </button>
-                    <button @onclick="SaveCustomer" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg">
-                        Save
+                    <button @onclick="SaveSale" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg">
+                        💾 Save Sale
                     </button>
                 </div>
             </div>
         </div>
     }
 
-    <!-- Customers Table -->
+    @* Edit Customer Modal *@
+    @if (showEditCustomerModal)
+    {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-semibold">Edit Customer Details</h2>
+                    <button @onclick="() => showEditCustomerModal = false" class="text-gray-500 hover:text-gray-700 text-xl">✖</button>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex flex-col">
+                        <label class="text-sm font-medium mb-1">Customer Name *</label>
+                        <input type="text" @bind="customerToEdit.Name" class="px-4 py-2 border rounded-lg">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-sm font-medium mb-1">Phone Number *</label>
+                        <input type="tel" @bind="customerToEdit.Phone" maxlength="11" class="px-4 py-2 border rounded-lg">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-sm font-medium mb-1">Email *</label>
+                        <input type="email" @bind="customerToEdit.Email" class="px-4 py-2 border rounded-lg">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-sm font-medium mb-1">Address *</label>
+                        <input type="text" @bind="customerToEdit.Address" class="px-4 py-2 border rounded-lg">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button @onclick="() => showEditCustomerModal = false" class="bg-gray-200 py-2 px-6 rounded-lg font-bold">Cancel</button>
+                    <button @onclick="UpdateCustomer" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-6 rounded-lg font-bold">Update</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* Sales Table *@
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[700px]">
-            <thead class="bg-gray-200">
-                <tr>
-                    <th class="px-6 py-3 text-left font-semibold">Name</th>
-                    <th class="px-6 py-3 text-left font-semibold">Phone</th>
-                    <th class="px-6 py-3 text-left font-semibold">Email</th>
-                    <th class="px-6 py-3 text-left font-semibold">Balance</th>
-                    <th class="px-6 py-3 text-left font-semibold">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var customer in customers)
-                {
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="px-6 py-4">@customer.Name</td>
-                        <td class="px-6 py-4">@customer.Phone</td>
-                        <td class="px-6 py-4">@customer.Email</td>
-                        <td class="px-6 py-4 font-semibold">@((customer.OpeningBalance ?? 0m).ToString("C"))</td>
-                        <td class="px-6 py-4">
-                            <button @onclick="() => EditCustomer(customer)" class="bg-blue-500 text-white px-3 py-1 rounded mr-2">✏️ Edit</button>
-                            <button @onclick="() => DeleteCustomer(customer.Id)" class="bg-red-500 text-white px-3 py-1 rounded">🗑️ Delete</button>
-                        </td>
+            <table class="w-full min-w-[1000px]">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-semibold">Sale #</th>
+                        <th class="px-4 py-3 text-left font-semibold">Customer Details</th>
+                        <th class="px-4 py-3 text-left font-semibold">Items</th>
+                        <th class="px-4 py-3 text-right font-semibold">Total</th>
+                        <th class="px-4 py-3 text-right font-semibold">Paid</th>
+                        <th class="px-4 py-3 text-right font-semibold">Remaining</th>
+                        <th class="px-4 py-3 text-center font-semibold">Status</th>
+                        <th class="px-4 py-3 text-left font-semibold">Actions</th>
                     </tr>
-                }
-            </tbody>
+                </thead>
+                <tbody>
+                    @foreach (var sale in PaginatedSales)
+                    {
+                        var status = GetSaleStatus(sale);
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="px-4 py-4 font-mono text-sm">
+                                <div>@sale.SaleNumber</div>
+                                <div class="text-xs text-gray-400">@sale.SaleDate.ToString("dd MMM yyyy")</div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-semibold">@sale.Customer.Name</span>
+                                    <button @onclick="() => EditCustomer(sale.Customer)" class="text-blue-500 hover:text-blue-700 text-xs" title="Edit Customer">✏️</button>
+                                </div>
+                                <div class="text-xs text-gray-500">@sale.Customer.Phone</div>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="text-xs">
+                                    @foreach (var item in sale.SaleItems.Take(1))
+                                    {
+                                        <div>@item.Item.Name (@item.Quantity)</div>
+                                    }
+                                    @if (sale.SaleItems.Count > 1)
+                                    {
+                                        <div class="text-gray-400">+@(sale.SaleItems.Count - 1) more...</div>
+                                    }
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 text-right">Rs. @sale.TotalAmount.ToString("N0")</td>
+                            <td class="px-4 py-4 text-right text-green-600">Rs. @sale.PaidAmount.ToString("N0")</td>
+                            <td class="px-4 py-4 text-right">
+                                <span class="@(status == "Overdue" ? "text-red-600 font-bold" : "")">
+                                    Rs. @sale.RemainingAmount.ToString("N0")
+                                </span>
+                            </td>
+                            <td class="px-4 py-4 text-center">
+                                <span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider
+                                    @(status == "Paid" ? "bg-green-100 text-green-800" : 
+                                      status == "Overdue" ? "bg-red-100 text-red-800" : 
+                                      "bg-yellow-100 text-yellow-800")">
+                                    @status
+                                </span>
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="flex gap-1">
+                                    <button @onclick="() => ViewInvoice(sale.Id)" class="bg-blue-500 text-white p-1 rounded text-xs" title="View Invoice">📄</button>
+                                    <button @onclick="() => EmailInvoice(sale)" class="bg-purple-500 text-white p-1 rounded text-xs" title="Email Invoice">✉️</button>
+                                    <button @onclick="() => ConfirmDeleteSale(sale.Id)" class="bg-red-500 text-white p-1 rounded text-xs" title="Delete Sale">🗑️</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
             </table>
         </div>
+    @* Pagination *@
+    <div class="mt-6 flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-lg shadow-sm">
+        <div class="text-sm text-gray-500">
+            Showing <span class="font-bold text-gray-700">@(((currentPage - 1) * pageSize) + 1)</span> to <span class="font-bold text-gray-700">@(Math.Min(currentPage * pageSize, FilteredSales.Count))</span> of <span class="font-bold text-gray-700">@FilteredSales.Count</span> sales
+        </div>
+        <div class="flex items-center gap-2">
+            <button @onclick="PreviousPage" disabled="@(currentPage == 1)" class="p-2 rounded-lg border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                上 Prev
+            </button>
+            @for (int i = 1; i <= TotalPages; i++)
+            {
+                var pageNum = i;
+                <button @onclick="() => GoToPage(pageNum)" class="w-10 h-10 rounded-lg border @(currentPage == pageNum ? "bg-blue-500 text-white border-blue-500" : "hover:bg-gray-100") font-bold">
+                    @pageNum
+                </button>
+            }
+            <button @onclick="NextPage" disabled="@(currentPage == TotalPages || TotalPages == 0)" class="p-2 rounded-lg border hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                Next 下
+            </button>
+            <select @bind="pageSize" class="ml-4 p-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="10">10 / page</option>
+                <option value="25">25 / page</option>
+                <option value="50">50 / page</option>
+            </select>
+        </div>
+    </div>
     </div>
 </div>
 
 @code {
-    private List<Customer> customers = new();
+    private List<Sale> sales = new();
+    private List<Item> availableItems = new();
+    private List<Customer> allCustomers = new();
     private Customer newCustomer = new();
+    private Sale newSale = new();
+    private List<SaleItem> selectedItems = new();
+    private List<string> validationErrors = new();
+    
+    // Step 5 State
+    private string searchText = "";
+    private DateTime? startDate;
+    private DateTime? endDate;
+    private int currentPage = 1;
+    private int pageSize = 10;
+    
+    private int selectedItemId = 0;
+    private int selectedQuantity = 1;
+    
     private bool showForm = false;
     private bool isEditing = false;
+    private bool showEditCustomerModal = false;
+    private Customer customerToEdit = new();
     private int currentUserId = 1; // Mock user ID
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadCustomers();
+        await LoadSales();
+        await LoadItems();
+        allCustomers = await CustomerService.GetAllAsync(currentUserId);
     }
 
-    private async Task LoadCustomers()
+    private async Task LoadSales()
     {
-        customers = await CustomerService.GetAllAsync(currentUserId);
+        sales = await SaleService.GetAllAsync(currentUserId);
+    }
+
+    private async Task LoadItems()
+    {
+        availableItems = await ItemService.GetAllAsync();
+    }
+
+    // --- STEP 5: Filtering & Pagination Logic ---
+    private List<Sale> FilteredSales => sales
+        .Where(s => 
+            (string.IsNullOrWhiteSpace(searchText) || 
+             (s.Customer?.Name?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) || 
+             (s.SaleNumber?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+            (!startDate.HasValue || s.SaleDate.Date >= startDate.Value.Date) &&
+            (!endDate.HasValue || s.SaleDate.Date <= endDate.Value.Date)
+        ).ToList();
+
+    private List<Sale> PaginatedSales => FilteredSales
+        .Skip((currentPage - 1) * pageSize)
+        .Take(pageSize)
+        .ToList();
+
+    private int TotalPages => (int)Math.Ceiling((double)FilteredSales.Count / pageSize);
+
+    private void GoToPage(int page) => currentPage = page;
+    private void NextPage() => currentPage = Math.Min(currentPage + 1, TotalPages);
+    private void PreviousPage() => currentPage = Math.Max(currentPage - 1, 1);
+
+    private void ResetFilters()
+    {
+        searchText = "";
+        startDate = null;
+        endDate = null;
+        currentPage = 1;
+    }
+
+    private string GetSaleStatus(Sale sale)
+    {
+        if (sale.RemainingAmount <= 0) return "Paid";
+        
+        // If remaining amount > 0, check due date
+        if (sale.PaymentDueDate.HasValue && DateTime.Now.Date > sale.PaymentDueDate.Value.Date)
+        {
+            return "Overdue";
+        }
+        
+        return "Pending";
+    }
+
+    private void EditCustomer(Customer customer)
+    {
+        customerToEdit = new Customer
+        {
+            Id = customer.Id,
+            Name = customer.Name,
+            Phone = customer.Phone,
+            Email = customer.Email,
+            Address = customer.Address,
+            UserId = customer.UserId
+        };
+        showEditCustomerModal = true;
+    }
+
+    private async Task UpdateCustomer()
+    {
+        if (string.IsNullOrWhiteSpace(customerToEdit.Name)) return;
+        
+        await CustomerService.UpdateAsync(customerToEdit);
+        showEditCustomerModal = false;
+        await LoadSales(); // Reload to show updated customer info
+    }
+
+    private async Task ConfirmDeleteSale(int saleId)
+    {
+        bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this sale record? This will also remove the associated invoice/income entries.");
+        if (confirmed)
+        {
+            await SaleService.DeleteAsync(saleId);
+            await LoadSales();
+        }
     }
 
     private void ShowAddForm()
     {
         newCustomer = new Customer { UserId = currentUserId };
+        newSale = new Sale 
+        { 
+            UserId = currentUserId,
+            SaleDate = DateTime.Now,
+            PaymentType = "Cash",
+            PaidAmount = 0
+        };
+        selectedItems = new List<SaleItem>();
+        validationErrors = new();
+        selectedItemId = 0;
+        selectedQuantity = 1;
         isEditing = false;
         showForm = true;
     }
 
-    private void EditCustomer(Customer customer)
+    private async Task AddItem()
     {
-        newCustomer = new Customer 
-        { 
-            Id = customer.Id,
-            Name = customer.Name,
-            Phone = customer.Phone,
-            Email = customer.Email,
-            OpeningBalance = customer.OpeningBalance,
-            UserId = customer.UserId
-        };
-        isEditing = true;
-        showForm = true;
-    }
+        if (selectedItemId == 0 || selectedQuantity < 1) return;
 
-    private async Task SaveCustomer()
-    {
-        if (isEditing)
+        var item = availableItems.FirstOrDefault(i => i.Id == selectedItemId);
+        if (item == null) return;
+
+        // --- STEP 5: Stock Warning ---
+        if (item.StockQuantity < selectedQuantity)
         {
-            await CustomerService.UpdateAsync(newCustomer);
+            await JSRuntime.InvokeVoidAsync("alert", $"Warning: Low Stock! Only {item.StockQuantity} units available.");
+            return;
+        }
+
+        var existing = selectedItems.FirstOrDefault(si => si.ItemId == selectedItemId);
+        if (existing != null)
+        {
+            if (item.StockQuantity < (existing.Quantity + selectedQuantity))
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Cannot add more. Total quantity exceeds stock.");
+                return;
+            }
+            existing.Quantity += selectedQuantity;
+            existing.TotalPrice = existing.Quantity * existing.UnitPrice;
         }
         else
         {
-            await CustomerService.AddAsync(newCustomer);
+            selectedItems.Add(new SaleItem
+            {
+                ItemId = item.Id,
+                Item = item,
+                Quantity = selectedQuantity,
+                UnitPrice = item.Price,
+                TotalPrice = selectedQuantity * item.Price
+            });
         }
-        await LoadCustomers();
+
+        selectedItemId = 0;
+        selectedQuantity = 1;
+    }
+
+    private void RemoveItem(SaleItem item) => selectedItems.Remove(item);
+
+    private decimal CalculateTotal() => selectedItems.Sum(i => i.TotalPrice);
+
+    private async Task SaveSale()
+    {
+        validationErrors.Clear();
+
+        if (string.IsNullOrWhiteSpace(newCustomer.Name)) validationErrors.Add("Name");
+        
+        if (string.IsNullOrWhiteSpace(newCustomer.Phone) || 
+            newCustomer.Phone.Length != 11 || 
+            !newCustomer.Phone.StartsWith("03") || 
+            !newCustomer.Phone.All(char.IsDigit)) 
+        {
+            validationErrors.Add("Phone");
+        }
+
+        if (string.IsNullOrWhiteSpace(newCustomer.Email) || !newCustomer.Email.Contains("@") || !newCustomer.Email.Contains("."))
+        {
+            validationErrors.Add("Email");
+        }
+
+        if (string.IsNullOrWhiteSpace(newCustomer.Address)) validationErrors.Add("Address");
+        if (newSale.SaleDate == default) validationErrors.Add("Date");
+
+        if (validationErrors.Any())
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Please fill all required fields correctly! Phone must be 11 digits starting with 03.");
+            return;
+        }
+
+        if (!selectedItems.Any())
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Please add at least one item to the sale!");
+            return;
+        }
+
+        // Save or find customer
+        Customer? customer = allCustomers.FirstOrDefault(c => 
+            c.Name?.Equals(newCustomer.Name, StringComparison.OrdinalIgnoreCase) == true);
+
+        if (customer == null)
+        {
+            await CustomerService.AddAsync(newCustomer);
+            allCustomers = await CustomerService.GetAllAsync(currentUserId);
+            customer = allCustomers.OrderByDescending(c => c.Id).FirstOrDefault();
+        }
+        else
+        {
+            // Sync with current input
+            customer.Phone = newCustomer.Phone;
+            customer.Email = newCustomer.Email;
+            customer.Address = newCustomer.Address;
+            await CustomerService.UpdateAsync(customer);
+        }
+
+        if (customer == null) return;
+
+        newSale.CustomerId = customer.Id;
+        await SaleService.CreateSaleAsync(newSale, selectedItems);
+
+        await LoadSales();
         CancelForm();
     }
 
-    private async Task DeleteCustomer(int id)
+    private async Task ViewInvoice(int saleId)
     {
-        if (await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure?"))
+        await InvoiceService.GenerateInvoiceAsync(saleId);
+        Navigation.NavigateTo($"/invoice/{saleId}");
+    }
+
+    private async Task EmailInvoice(Sale sale)
+    {
+        // Mock email functionality
+        await JSRuntime.InvokeVoidAsync("alert", $"Invoice for {sale.SaleNumber} has been sent to {sale.Customer.Email}!");
+    }
+
+    private async Task ExportToPdf()
+    {
+        var headers = new string[] { "Sale #", "Date", "Customer", "Total", "Paid", "Remaining", "Status" };
+        var body = FilteredSales.Select(s => new string[] 
+        { 
+            s.SaleNumber, 
+            s.SaleDate.ToString("yyyy-MM-dd"), 
+            s.Customer?.Name ?? "N/A", 
+            $"Rs. {s.TotalAmount:N0}", 
+            $"Rs. {s.PaidAmount:N0}", 
+            $"Rs. {s.RemainingAmount:N0}", 
+            GetSaleStatus(s) 
+        }).ToList();
+
+        var fileName = $"SalesExport_{DateTime.Now:yyyyMMdd}.pdf";
+        await JSRuntime.InvokeVoidAsync("generateTablePdf", fileName, "Sales Report", headers, body);
+    }
+
+    private async Task ExportToCsv()
+    {
+        var csv = new System.Text.StringBuilder();
+        csv.AppendLine("Sale Number,Date,Customer,Total,Paid,Remaining,Status");
+        
+        foreach (var sale in FilteredSales)
         {
-            await CustomerService.DeleteAsync(id);
-            await LoadCustomers();
+            csv.AppendLine($"{sale.SaleNumber},{sale.SaleDate:yyyy-MM-dd},{sale.Customer.Name},{sale.TotalAmount},{sale.PaidAmount},{sale.RemainingAmount},{GetSaleStatus(sale)}");
         }
+
+        var fileName = $"SalesExport_{DateTime.Now:yyyyMMdd}.csv";
+        var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
+        
+        // Use JS to trigger download
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "text/csv", Convert.ToBase64String(bytes));
     }
 
     private void CancelForm()
     {
         showForm = false;
         newCustomer = new();
+        newSale = new();
+        selectedItems = new();
+        validationErrors = new();
     }
 }

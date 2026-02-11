@@ -15,6 +15,144 @@
     <Routes />
     <script src="theme.js"></script>
     <script src="_framework/blazor.web.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        window.downloadFile = (fileName, contentType, base64Data) => {
+            const link = document.createElement('a');
+            link.download = fileName;
+            link.href = `data:${contentType};base64,${base64Data}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        window.generateInvoicePdf = (fileName, docContent) => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Header Section
+            doc.setFillColor(37, 99, 235); // Blue-600
+            doc.rect(0, 0, 210, 40, 'F');
+            
+            doc.setFontSize(28);
+            doc.setTextColor(255, 255, 255);
+            doc.setFont(undefined, 'bold');
+            doc.text("INVOICE", 14, 28);
+            
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.text("Bookshop & Stationary", 196, 15, { align: "right" });
+            doc.text("123 Main Street, City", 196, 20, { align: "right" });
+            doc.text("Phone: +92 300 1234567", 196, 25, { align: "right" });
+            
+            // Invoice Meta Info
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'bold');
+            doc.text("INVOICE DETAILS", 140, 55);
+            doc.setFont(undefined, 'normal');
+            doc.text(`Invoice #: ${docContent.invoiceNum}`, 140, 62);
+            doc.text(`Sale #:    ${docContent.saleNum}`, 140, 67);
+            doc.text(`Date:      ${docContent.date}`, 140, 72);
+            if (docContent.dueDate) {
+                doc.setTextColor(220, 38, 38);
+                doc.text(`Due Date:  ${docContent.dueDate}`, 140, 77);
+                doc.setTextColor(0, 0, 0);
+            }
+            doc.text(`Payment:   ${docContent.paymentType}`, 140, 82);
+            
+            // Bill To Section
+            doc.setFont(undefined, 'bold');
+            doc.text("BILL TO", 14, 55);
+            doc.setFontSize(12);
+            doc.text(docContent.customerName, 14, 62);
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            if (docContent.customerPhone) doc.text(`📞 ${docContent.customerPhone}`, 14, 68);
+            if (docContent.customerAddress) doc.text(`📍 ${docContent.customerAddress}`, 14, 74);
+            
+            // Items Table
+            doc.autoTable({
+                startY: 95,
+                head: [['#', 'Item Desciption', 'Qty', 'Unit Price', 'Total']],
+                body: docContent.items.map((i, index) => [index + 1, i.name, i.qty, i.price, i.total]),
+                theme: 'grid',
+                headStyles: { fillColor: [37, 99, 235], fontSize: 10, halign: 'center' },
+                columnStyles: {
+                    0: { halign: 'center', cellWidth: 10 },
+                    2: { halign: 'center' },
+                    3: { halign: 'right' },
+                    4: { halign: 'right' }
+                }
+            });
+            
+            // Summary Section
+            const finalY = doc.lastAutoTable.finalY + 15;
+            const rightEdge = 196;
+            const labelX = 130;
+            
+            doc.setFontSize(11);
+            doc.text(`Subtotal:`, labelX, finalY);
+            doc.text(`Rs. ${docContent.subtotal}`, rightEdge, finalY, { align: "right" });
+            
+            doc.text(`Amount Paid:`, labelX, finalY + 8);
+            doc.setTextColor(22, 163, 74);
+            doc.text(`Rs. ${docContent.paid}`, rightEdge, finalY + 8, { align: "right" });
+            doc.setTextColor(0, 0, 0);
+            
+            // Fix: Safe numeric parsing for Remaining Amount
+            const remStr = (docContent.remaining || "0").toString().replace(/[^0-9.]/g, "");
+            const remVal = parseFloat(remStr);
+            
+            if (remVal > 0.01) {
+                doc.setFont(undefined, 'bold');
+                doc.text(`Due Payment:`, labelX, finalY + 16);
+                doc.setTextColor(220, 38, 38);
+                doc.text(`Rs. ${docContent.remaining}`, rightEdge, finalY + 16, { align: "right" });
+            } else {
+                doc.setFont(undefined, 'bold');
+                doc.setTextColor(22, 163, 74);
+                doc.text("✓ PAID IN FULL", rightEdge, finalY + 16, { align: "right" });
+            }
+            
+            doc.setTextColor(0, 0, 0);
+            const totalY = finalY + 28;
+            doc.setFillColor(243, 244, 246);
+            doc.rect(labelX - 2, totalY - 8, 70, 12, 'F');
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.text(`Grand Total:`, labelX, totalY);
+            doc.text(`Rs. ${docContent.total}`, rightEdge, totalY, { align: "right" });
+            
+            // Footer
+            doc.setFontSize(9);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(107, 114, 128);
+            doc.text("Thank you for your business! Please visit us again.", 105, 280, { align: "center" });
+            doc.text("Software powered by AccountingApp", 105, 285, { align: "center" });
+            
+            doc.save(fileName);
+        };
+
+        window.generateTablePdf = (fileName, title, headers, body) => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
+            
+            doc.setFontSize(18);
+            doc.text(title, 14, 22);
+            
+            doc.autoTable({
+                startY: 30,
+                head: [headers],
+                body: body,
+                theme: 'striped',
+                headStyles: { fillColor: [59, 130, 246] }
+            });
+            
+            doc.save(fileName);
+        };
+    </script>
 </body>
 
 </html>
