@@ -1,3 +1,29 @@
 @inherits LayoutComponentBase
+@inject IJSRuntime JSRuntime
 
-@Body
+<div class="relative">
+    <button @onclick="ToggleTheme" class="fixed top-4 right-4 z-50 bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded-lg shadow">
+        @themeLabel
+    </button>
+    @Body
+</div>
+
+@code {
+    private string themeLabel = "🌙 Dark";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var theme = await JSRuntime.InvokeAsync<string>("getTheme");
+            themeLabel = theme == "dark" ? "☀️ Light" : "🌙 Dark";
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleTheme()
+    {
+        var theme = await JSRuntime.InvokeAsync<string>("toggleTheme");
+        themeLabel = theme == "dark" ? "☀️ Light" : "🌙 Dark";
+    }
+}

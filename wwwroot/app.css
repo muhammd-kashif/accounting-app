@@ -58,3 +58,45 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+/* Theme variables */
+:root {
+    --app-bg: #f3f4f6;
+    --app-surface: #ffffff;
+    --app-text: #111827;
+    --app-text-muted: #6b7280;
+    --app-border: #e5e7eb;
+    --app-sidebar: #1f2937;
+    --app-sidebar-text: #ffffff;
+    --app-sidebar-hover: #374151;
+}
+
+body.theme-dark {
+    --app-bg: #0f172a;
+    --app-surface: #111827;
+    --app-text: #e5e7eb;
+    --app-text-muted: #94a3b8;
+    --app-border: #1f2937;
+    --app-sidebar: #0b1220;
+    --app-sidebar-text: #e5e7eb;
+    --app-sidebar-hover: #1f2937;
+}
+
+body {
+    background-color: var(--app-bg);
+    color: var(--app-text);
+}
+
+body .bg-gray-100 { background-color: var(--app-bg) !important; }
+body .bg-white { background-color: var(--app-surface) !important; }
+body .text-gray-800 { color: var(--app-text) !important; }
+body .text-gray-700,
+body .text-gray-600,
+body .text-gray-500 { color: var(--app-text-muted) !important; }
+body .border,
+body .border-gray-200,
+body .border-gray-300 { border-color: var(--app-border) !important; }
+
+body.theme-dark .bg-gray-800 { background-color: var(--app-sidebar) !important; }
+body.theme-dark .text-white { color: var(--app-sidebar-text) !important; }
+body.theme-dark .hover\:bg-gray-700:hover { background-color: var(--app-sidebar-hover) !important; }
