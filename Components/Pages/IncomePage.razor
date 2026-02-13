@@ -58,6 +58,8 @@
                 <option value="">All Types</option>
                 <option value="Cash">💵 Cash</option>
                 <option value="Bank">🏦 Bank</option>
+                <option value="Card">💳 Card</option>
+                <option value="Cheque">📄 Cheque</option>
             </select>
         </div>
         <div class="flex gap-2">
@@ -87,7 +89,7 @@
                     <input type="date" @bind="newIncome.Date" class="md:col-span-2 px-4 py-2 border rounded-lg">
                     
                     <select @bind="newIncome.CustomerId" class="px-4 py-2 border rounded-lg">
-                        <option value="0">Select Customer</option>
+                        <option value="0">None / General Income</option>
                         @foreach (var customer in customers)
                         {
                             <option value="@customer.Id">@customer.Name</option>
@@ -98,6 +100,8 @@
                         <option value="">Payment Type</option>
                         <option value="Cash">💵 Cash</option>
                         <option value="Bank">🏦 Bank</option>
+                        <option value="Card">💳 Card</option>
+                        <option value="Cheque">📄 Cheque</option>
                     </select>
 
                     <input type="number" @bind="newIncome.Amount" placeholder="Amount" class="md:col-span-2 px-4 py-2 border rounded-lg" step="0.01">
@@ -136,13 +140,36 @@
                     <tr class="border-b hover:bg-gray-50 transition-colors">
                         <td class="px-6 py-4">@income.Date?.ToString("dd MMM yyyy")</td>
                         <td class="px-6 py-4">
-                            <div class="font-bold text-gray-700">@income.Customer?.Name</div>
-                            <div class="text-xs text-gray-400">ID: #C-@income.CustomerId</div>
+                            @if (income.CustomerId != null && income.CustomerId != 0)
+                            {
+                                <div class="font-bold text-gray-700">@income.Customer?.Name</div>
+                                <div class="text-xs text-gray-400">ID: #C-@income.CustomerId</div>
+                            }
+                            else
+                            {
+                                <div class="font-bold text-gray-400 italic">General / Other</div>
+                            }
                         </td>
                         <td class="px-6 py-4 font-bold text-lg text-green-600">Rs. @income.Amount.ToString("N2")</td>
                         <td class="px-6 py-4">
-                            <span class="px-3 py-1 rounded-full text-xs font-bold uppercase @(income.PaymentType == "Cash" ? "bg-green-100 text-green-700" : "bg-purple-100 text-purple-700")">
-                                @(income.PaymentType == "Cash" ? "💵 Cash" : "🏦 Bank")
+                            @{
+                                string badgeColor = income.PaymentType switch {
+                                    "Cash" => "bg-green-100 text-green-700",
+                                    "Bank" => "bg-purple-100 text-purple-700",
+                                    "Card" => "bg-blue-100 text-blue-700",
+                                    "Cheque" => "bg-amber-100 text-amber-700",
+                                    _ => "bg-gray-100 text-gray-700"
+                                };
+                                string icon = income.PaymentType switch {
+                                    "Cash" => "💵",
+                                    "Bank" => "🏦",
+                                    "Card" => "💳",
+                                    "Cheque" => "📄",
+                                    _ => "💰"
+                                };
+                            }
+                            <span class="px-3 py-1 rounded-full text-xs font-bold uppercase @badgeColor">
+                                @icon @income.PaymentType
                             </span>
                         </td>
                         <td class="px-6 py-4 text-gray-500 italic max-w-xs truncate">@income.Description</td>
@@ -234,22 +261,39 @@
 
     private async Task SaveIncome()
     {
-        if (newIncome.CustomerId == 0)
+        try
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Customer select karein");
-            return;
-        }
+            // Fix for nullable int binding: 0 means no customer selected
+            if (newIncome.CustomerId == 0) newIncome.CustomerId = null;
 
-        if (isEditing)
-        {
-            await IncomeService.UpdateAsync(newIncome);
+            if (newIncome.Amount <= 0)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Amount must be greater than 0");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(newIncome.PaymentType))
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Please select a Payment Type");
+                return;
+            }
+
+            if (isEditing)
+            {
+                await IncomeService.UpdateAsync(newIncome);
+            }
+            else
+            {
+                await IncomeService.AddAsync(newIncome);
+            }
+            await LoadData();
+            CancelForm();
         }
-        else
+        catch (Exception ex)
         {
-            await IncomeService.AddAsync(newIncome);
+            await JSRuntime.InvokeVoidAsync("alert", $"Error saving income: {ex.Message}");
+            Console.WriteLine(ex);
         }
-        await LoadData();
-        CancelForm();
     }
 
     private void ResetFilters()

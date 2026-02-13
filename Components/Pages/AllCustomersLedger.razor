@@ -1,0 +1,258 @@
+
+
+@page "/all-customers-ledger"
+@rendermode InteractiveServer
+@using AccountingApp.Services
+@using AccountingApp.Models
+@inject ICustomerService CustomerService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<div class="p-4 md:p-8 bg-gray-50 min-h-screen">
+    @* Header *@
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">👥 All Customers Ledger</h1>
+            <p class="text-gray-500">Market Recovery Dashboard & Balance Summary</p>
+        </div>
+        
+        <div class="flex gap-2">
+            <button @onclick="ExportToPdf" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg flex items-center gap-2 shadow-sm">
+                📄 Export PDF
+            </button>
+        </div>
+    </div>
+
+    @* Summary Cards *@
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-red-500">
+            <div class="text-xs font-bold text-gray-400 uppercase">Total Receivables (Lene Hain)</div>
+            <div class="text-2xl font-bold text-red-600">Rs. @TotalReceivable.ToString("N0")</div>
+            <div class="text-xs text-gray-400 mt-1">@ReceivableCount Customers owe you</div>
+        </div>
+        <!-- <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-500">
+            <div class="text-xs font-bold text-gray-400 uppercase">Total Payables (Dene Hain)</div>
+            <div class="text-2xl font-bold text-green-600">Rs. @Math.Abs(TotalPayable).ToString("N0")</div>
+            <div class="text-xs text-gray-400 mt-1">@PayableCount Customers have advance</div>
+        </div> -->
+        <div class="bg-gray-800 p-5 rounded-xl shadow-lg">
+            <div class="text-xs font-bold text-gray-400 uppercase">Net Market Exposure</div>
+            <div class="text-3xl font-bold text-white">Rs. @((TotalReceivable + TotalPayable).ToString("N0"))</div>
+        </div>
+    </div>
+
+    @* Filters *@
+    <div class="bg-white p-2 rounded-lg shadow-sm mb-6 flex gap-2 overflow-x-auto">
+        <button @onclick='() => SetFilter("All")' 
+                class="px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-colors @(activeFilter == "All" ? "bg-gray-800 text-white" : "text-gray-600 hover:bg-gray-100")">
+            All Customers (@customers.Count)
+        </button>
+        <button @onclick='() => SetFilter("Receivable")' 
+                class="px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-colors @(activeFilter == "Receivable" ? "bg-red-100 text-red-700 border border-red-200" : "text-gray-600 hover:bg-gray-100")">
+            🔴 Receivables (@ReceivableCount)
+        </button>
+        <!-- <button @onclick='() => SetFilter("Payable")' 
+                class="px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-colors @(activeFilter == "Payable" ? "bg-green-100 text-green-700 border border-green-200" : "text-gray-600 hover:bg-gray-100")">
+            🟢 Payables (@PayableCount)
+        </button> -->
+        <button @onclick='() => SetFilter("OverLimit")' 
+                class="px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-colors @(activeFilter == "OverLimit" ? "bg-red-600 text-white border border-red-700" : "text-gray-600 hover:bg-gray-100")">
+            ⚠️ Over Limit
+        </button>
+        <button @onclick='() => SetFilter("Zero")' 
+                class="px-4 py-2 rounded-lg font-bold text-sm whitespace-nowrap transition-colors @(activeFilter == "Zero" ? "bg-gray-200 text-gray-800" : "text-gray-600 hover:bg-gray-100")">
+            Zero Balance
+        </button>
+    </div>
+
+    @* Table *@
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-[800px]">
+                <thead class="bg-gray-100 border-b">
+                    <tr>
+                        <th class="px-6 py-3 text-left font-bold text-gray-600">Customer</th>
+                        <th class="px-6 py-3 text-left font-bold text-gray-600">Performance</th>
+                        <th class="px-6 py-3 text-right font-bold text-gray-600">Total Sales</th>
+                        <th class="px-6 py-3 text-right font-bold text-gray-600">Received</th>
+                        <th class="px-6 py-3 text-right font-bold text-gray-800 bg-gray-50">Net Balance</th>
+                        <th class="px-6 py-3 text-center font-bold text-gray-600">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @if (isLoading)
+                    {
+                         <tr>
+                            <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                                Loading Balances...
+                            </td>
+                        </tr>
+                    }
+                    else if (!FilteredCustomers.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center text-gray-500">No customers found for this filter.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var c in FilteredCustomers)
+                        {
+                            var usagePercent = c.CreditLimit > 0 ? (c.NetBalance / c.CreditLimit) * 100 : 0;
+                            var isOverLimit = c.NetBalance > c.CreditLimit;
+                            
+                            <tr class="hover:bg-gray-50 transition-colors group">
+                                <td class="px-6 py-4">
+                                    <div class="font-bold text-gray-800 text-lg flex items-center gap-2">
+                                        @c.Name
+                                        @if (isOverLimit)
+                                        {
+                                            <span class="bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full border border-red-200">⚠️ Over Limit</span>
+                                        }
+                                    </div>
+                                    <div class="text-sm text-gray-500">📞 @c.Phone</div>
+                                </td>
+                                <td class="px-6 py-4 text-sm">
+                                    <div class="text-gray-700">Orders: <b>@c.TotalOrders</b></div>
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        Last Active: 
+                                        @if (c.LastActivityDate.HasValue)
+                                        {
+                                            <span class="@GetActivityColor(c.LastActivityDate)">@c.LastActivityDate.Value.ToString("dd MMM")</span> 
+                                            <span class="text-gray-400">(@((DateTime.Now - c.LastActivityDate.Value).Days) days ago)</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-gray-400">Never</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-right text-gray-500">@c.TotalSales.ToString("N0")</td>
+                                <td class="px-6 py-4 text-right text-gray-500">@c.TotalReceived.ToString("N0")</td>
+                                <td class="px-6 py-4 bg-gray-50">
+                                    <div class="flex flex-col items-end">
+                                        <div class="font-bold text-lg @(c.NetBalance > 0 ? "text-red-600" : c.NetBalance < 0 ? "text-green-600" : "text-gray-400")">
+                                            Rs. @Math.Abs(c.NetBalance).ToString("N0")
+                                        </div>
+                                        
+                                        @* Credit Limit Progress Bar *@
+                                        @if(c.NetBalance > 0)
+                                        {
+                                            <div class="w-full h-1.5 bg-gray-200 rounded-full mt-1 overflow-hidden" style="max-width: 120px;">
+                                                <div class="h-full rounded-full @(isOverLimit ? "bg-red-500" : "bg-blue-500")" 
+                                                     style="width: @(Math.Min(usagePercent, 100))%"></div>
+                                            </div>
+                                            <div class="text-[10px] text-gray-400 mt-0.5">
+                                                Limit: Rs. @c.CreditLimit.ToString("N0") (@usagePercent.ToString("0")%)
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="text-[10px] uppercase font-bold tracking-wide text-gray-400">
+                                                @(c.NetBalance < 0 ? "Payable" : "Settled")
+                                            </div>
+                                        }
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <div class="flex justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                        @if (c.NetBalance > 0)
+                                        {
+                                            <a href="@GetWhatsAppLink(c)" target="_blank" 
+                                               class="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg shadow-sm" 
+                                               title="Send Reminder on WhatsApp">
+                                                📱
+                                            </a>
+                                        }
+                                        <button @onclick="() => ViewLedger(c.CustomerId)" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-bold shadow-sm">
+                                            📑 View Ledger
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<CustomerBalanceDto> customers = new();
+    private string activeFilter = "All"; // All, Receivable, Payable, Zero
+    private bool isLoading = true;
+
+    private decimal TotalReceivable => customers.Where(c => c.NetBalance > 0).Sum(c => c.NetBalance);
+    private decimal TotalPayable => customers.Where(c => c.NetBalance < 0).Sum(c => c.NetBalance);
+    private int ReceivableCount => customers.Count(c => c.NetBalance > 0);
+    private int PayableCount => customers.Count(c => c.NetBalance < 0);
+
+    private List<CustomerBalanceDto> FilteredCustomers => activeFilter switch
+    {
+        "Receivable" => customers.Where(c => c.NetBalance > 0).ToList(),
+        "Payable" => customers.Where(c => c.NetBalance < 0).ToList(),
+        "OverLimit" => customers.Where(c => c.NetBalance > c.CreditLimit).ToList(),
+        "Zero" => customers.Where(c => c.NetBalance == 0).ToList(),
+        _ => customers
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        customers = await CustomerService.GetCustomerBalancesAsync();
+        
+        // Default sort: Highest Receivable first (Focus on Debt Recovery)
+        customers = customers.OrderByDescending(c => c.NetBalance).ToList();
+        
+        isLoading = false;
+    }
+
+    private void SetFilter(string filter)
+    {
+        activeFilter = filter;
+    }
+
+    private void ViewLedger(int id)
+    {
+        Navigation.NavigateTo($"/customer-ledger/{id}");
+    }
+
+    private string GetActivityColor(DateTime? date)
+    {
+        if (!date.HasValue) return "text-gray-400";
+        var days = (DateTime.Now - date.Value).Days;
+        if (days <= 7) return "text-green-600 font-bold";
+        if (days <= 30) return "text-yellow-600";
+        return "text-red-500 font-bold";
+    }
+
+    private string GetWhatsAppLink(CustomerBalanceDto c)
+    {
+        var message = Uri.EscapeDataString($"Salam {c.Name}, your total outstanding balance is Rs. {c.NetBalance:N0}. Please clear it at your earliest convenience.");
+        var phone = c.Phone.StartsWith("0") ? "92" + c.Phone.Substring(1) : c.Phone;
+        return $"https://wa.me/{phone}?text={message}";
+    }
+
+    private async Task ExportToPdf()
+    {
+        var headers = new string[] { "Customer", "Phone", "Total Sales", "Received", "Net Balance" };
+        var body = FilteredCustomers.Select(c => new string[] 
+        { 
+            c.Name, 
+            c.Phone, 
+            c.TotalSales.ToString("N0"), 
+            c.TotalReceived.ToString("N0"), 
+            c.NetBalance.ToString("N0") + (c.NetBalance > 0 ? " (Dr)" : c.NetBalance < 0 ? " (Cr)" : "")
+        }).ToList();
+
+        var fileName = $"All_Customers_Ledger_{DateTime.Now:yyyyMMdd}.pdf";
+        await JSRuntime.InvokeVoidAsync("generateTablePdf", fileName, "All Customers Summary", headers, body);
+    }
+}

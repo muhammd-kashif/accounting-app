@@ -1,3 +1,5 @@
+
+
 using AccountingApp.Data;
 using AccountingApp.Models;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +11,10 @@ namespace AccountingApp.Services
         Task<decimal> GetNetBalanceAsync(int userId);
         Task<List<Income>> GetDailyIncomeReportAsync(int userId, DateTime date);
         Task<decimal> GetProfitLossAsync(int userId);
+          // ADD THIS
+        Task<decimal> GetTotalReceivablesAsync(int userId);
+    
+        
     }
 
     public class ReportService : IReportService
@@ -46,5 +52,13 @@ namespace AccountingApp.Services
             var totalExpense = await _expenseService.GetTotalExpenseAsync(userId);
             return totalIncome - totalExpense;
         }
+        public async Task<decimal> GetTotalReceivablesAsync(int userId)
+        {
+            // Sum of remaining amounts from all unpaid sales
+            return await _context.Sales
+                .Where(s => s.UserId == userId && !s.IsPaid)
+                .SumAsync(s => s.RemainingAmount);
+        }
+
     }
 }

@@ -29,6 +29,9 @@ builder.Services.AddScoped<IItemService, ItemService>();
 builder.Services.AddScoped<ISaleService, SaleService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 
+
+// builder.Services.AddApexCharts();
+
 var app = builder.Build();
 
 // Migrations apply (Optional: useful for auto-setup)

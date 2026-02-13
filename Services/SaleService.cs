@@ -10,8 +10,8 @@ namespace AccountingApp.Services
         Task<List<Sale>> GetByCustomerIdAsync(int customerId);
         Task<Sale?> GetByIdAsync(int id);
         Task<Sale?> GetBySaleNumberAsync(string saleNumber);
-        Task<int> CreateSaleAsync(Sale sale, List<SaleItem> items);
-        Task UpdateAsync(Sale sale);
+        Task<int> CreateSaleAsync(Sale sale, List<SaleItem> items, List<SalePayment> payments);
+        Task UpdateAsync(Sale sale, List<SalePayment> payments);
         Task DeleteAsync(int id);
         Task<string> GenerateSaleNumberAsync();
     }
@@ -51,6 +51,7 @@ namespace AccountingApp.Services
         {
             return await _context.Sales
                 .Include(s => s.Customer)
+                .Include(s => s.Payments)
                 .Include(s => s.SaleItems)
                     .ThenInclude(si => si.Item)
                 .FirstOrDefaultAsync(s => s.Id == id);
@@ -60,12 +61,13 @@ namespace AccountingApp.Services
         {
             return await _context.Sales
                 .Include(s => s.Customer)
+                .Include(s => s.Payments)
                 .Include(s => s.SaleItems)
                     .ThenInclude(si => si.Item)
                 .FirstOrDefaultAsync(s => s.SaleNumber == saleNumber);
         }
 
-        public async Task<int> CreateSaleAsync(Sale sale, List<SaleItem> items)
+        public async Task<int> CreateSaleAsync(Sale sale, List<SaleItem> items, List<SalePayment> payments)
         {
             // Generate sale number if not provided
             if (string.IsNullOrEmpty(sale.SaleNumber))
@@ -73,8 +75,9 @@ namespace AccountingApp.Services
                 sale.SaleNumber = await GenerateSaleNumberAsync();
             }
 
-            // Calculate total amount
+            // Calculate totals
             sale.TotalAmount = items.Sum(i => i.TotalPrice);
+            sale.PaidAmount = payments.Sum(p => p.Amount);
             sale.RemainingAmount = sale.TotalAmount - sale.PaidAmount;
             sale.IsPaid = sale.RemainingAmount <= 0;
             sale.CreatedDate = DateTime.Now;
@@ -83,13 +86,12 @@ namespace AccountingApp.Services
             _context.Sales.Add(sale);
             await _context.SaveChangesAsync();
 
-            // Add sale items
+            // Add sale items and update stock
             foreach (var item in items)
             {
                 item.SaleId = sale.Id;
                 _context.SaleItems.Add(item);
 
-                // Update stock
                 var product = await _context.Items.FindAsync(item.ItemId);
                 if (product != null)
                 {
@@ -98,72 +100,84 @@ namespace AccountingApp.Services
                 }
             }
 
-            // --- STEP 4 Sync: Create Income Record ---
-            if (sale.PaidAmount > 0)
+            // Add payments and create income records
+            foreach (var payment in payments)
             {
-                var income = new Income
+                payment.SaleId = sale.Id;
+                payment.UserId = sale.UserId;
+                payment.CreatedDate = DateTime.Now;
+                _context.SalePayments.Add(payment);
+
+                // Create Income Record
+                if (payment.Amount > 0)
                 {
-                    Date = sale.SaleDate,
-                    CustomerId = sale.CustomerId,
-                    Amount = sale.PaidAmount,
-                    PaymentType = sale.PaymentType,
-                    Description = $"Sale Income: {sale.SaleNumber}",
-                    UserId = sale.UserId,
-                    SaleId = sale.Id,
-                    CreatedDate = DateTime.Now
-                };
-                _context.Incomes.Add(income);
+                    var income = new Income
+                    {
+                        Date = payment.PaymentDate,
+                        CustomerId = sale.CustomerId,
+                        Amount = payment.Amount,
+                        PaymentType = payment.PaymentMethod,
+                        Description = $"Sale Payment ({payment.PaymentMethod}): {sale.SaleNumber}",
+                        UserId = sale.UserId,
+                        SaleId = sale.Id,
+                        CreatedDate = DateTime.Now
+                    };
+                    _context.Incomes.Add(income);
+                }
             }
 
             await _context.SaveChangesAsync();
             return sale.Id;
         }
 
-        public async Task UpdateAsync(Sale sale)
+        public async Task UpdateAsync(Sale sale, List<SalePayment> payments)
         {
-            var existing = await _context.Sales.FindAsync(sale.Id);
+            var existing = await _context.Sales
+                .Include(s => s.Payments)
+                .FirstOrDefaultAsync(s => s.Id == sale.Id);
+                
             if (existing == null) return;
 
-            decimal oldPaidAmount = existing.PaidAmount;
-            
+            // Update sale header
             existing.SaleDate = sale.SaleDate;
-            existing.PaymentType = sale.PaymentType;
-            existing.PaidAmount = sale.PaidAmount;
-            existing.RemainingAmount = existing.TotalAmount - sale.PaidAmount;
+            existing.PaymentType = "Split"; // Set to Split if multiple, or keep for compatibility
+            existing.TotalAmount = sale.TotalAmount; // Should be recalculated in UI or here
+            existing.PaidAmount = payments.Sum(p => p.Amount);
+            existing.RemainingAmount = existing.TotalAmount - existing.PaidAmount;
             existing.IsPaid = existing.RemainingAmount <= 0;
             existing.PaymentDueDate = sale.PaymentDueDate;
             existing.Notes = sale.Notes;
 
-            // Sync with Income record
-            var income = await _context.Incomes.FirstOrDefaultAsync(i => i.SaleId == sale.Id);
-            if (income != null)
+            // Update Payments and Income records
+            // Remove old payments and incomes related to this sale
+            var oldPayments = _context.SalePayments.Where(p => p.SaleId == sale.Id);
+            _context.SalePayments.RemoveRange(oldPayments);
+
+            var oldIncomes = _context.Incomes.Where(i => i.SaleId == sale.Id);
+            _context.Incomes.RemoveRange(oldIncomes);
+
+            // Add new payments and incomes
+            foreach (var payment in payments)
             {
-                if (sale.PaidAmount > 0)
+                payment.SaleId = sale.Id;
+                payment.UserId = sale.UserId;
+                if (payment.CreatedDate == default) payment.CreatedDate = DateTime.Now;
+                _context.SalePayments.Add(payment);
+
+                if (payment.Amount > 0)
                 {
-                    income.Amount = sale.PaidAmount;
-                    income.PaymentType = sale.PaymentType;
-                    income.Date = sale.SaleDate;
+                    _context.Incomes.Add(new Income
+                    {
+                        Date = payment.PaymentDate,
+                        CustomerId = sale.CustomerId,
+                        Amount = payment.Amount,
+                        PaymentType = payment.PaymentMethod,
+                        Description = $"Sale Payment ({payment.PaymentMethod}): {sale.SaleNumber}",
+                        UserId = sale.UserId,
+                        SaleId = sale.Id,
+                        CreatedDate = DateTime.Now
+                    });
                 }
-                else
-                {
-                     // If paid amount becomes 0, remove the income record
-                    _context.Incomes.Remove(income);
-                }
-            }
-            else if (sale.PaidAmount > 0)
-            {
-                 // Create new income record if it didn't exist
-                _context.Incomes.Add(new Income
-                {
-                    Date = sale.SaleDate,
-                    CustomerId = sale.CustomerId,
-                    Amount = sale.PaidAmount,
-                    PaymentType = sale.PaymentType,
-                    Description = $"Sale Income: {sale.SaleNumber}",
-                    UserId = sale.UserId,
-                    SaleId = sale.Id,
-                    CreatedDate = DateTime.Now
-                });
             }
 
             await _context.SaveChangesAsync();
@@ -188,12 +202,12 @@ namespace AccountingApp.Services
                     }
                 }
 
-                // Delete associated income
-                var income = await _context.Incomes.FirstOrDefaultAsync(i => i.SaleId == id);
-                if (income != null)
-                {
-                    _context.Incomes.Remove(income);
-                }
+                // Delete associated payments and incomes
+                var payments = _context.SalePayments.Where(p => p.SaleId == id);
+                _context.SalePayments.RemoveRange(payments);
+
+                var incomes = _context.Incomes.Where(i => i.SaleId == id);
+                _context.Incomes.RemoveRange(incomes);
 
                 _context.Sales.Remove(sale);
                 await _context.SaveChangesAsync();
@@ -202,16 +216,10 @@ namespace AccountingApp.Services
 
         public async Task<string> GenerateSaleNumberAsync()
         {
-            var today = DateTime.Now;
-            var datePrefix = today.ToString("yyyyMMdd");
-            
-            // Get the count of sales created today
-            var todaySalesCount = await _context.Sales
-                .Where(s => s.SaleNumber.StartsWith($"SALE-{datePrefix}"))
-                .CountAsync();
-
-            var sequence = (todaySalesCount + 1).ToString("D4");
-            return $"SALE-{datePrefix}-{sequence}";
+            // Get total count of all sales to generate sequential number
+            var totalSalesCount = await _context.Sales.CountAsync();
+            var sequence = (totalSalesCount + 1).ToString("D4");
+            return $"SALE-{sequence}";
         }
     }
 }

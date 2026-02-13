@@ -29,6 +29,7 @@ namespace AccountingApp.Data
         public DbSet<Item> Items { get; set; }
         public DbSet<Sale> Sales { get; set; }
         public DbSet<SaleItem> SaleItems { get; set; }
+        public DbSet<SalePayment> SalePayments { get; set; }
         public DbSet<Invoice> Invoices { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -205,6 +206,16 @@ namespace AccountingApp.Data
                 .WithMany()
                 .HasForeignKey(i => i.SaleId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SalePayment>()
+                .HasOne(sp => sp.Sale)
+                .WithMany(s => s.Payments)
+                .HasForeignKey(sp => sp.SaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SalePayment>()
+                .Property(sp => sp.Amount)
+                .HasColumnType("decimal(18,2)");
 
             // Seed data for stationary items
             var seedDate = new DateTime(2026, 2, 11, 0, 0, 0, DateTimeKind.Utc);

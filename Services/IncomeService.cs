@@ -12,6 +12,8 @@ namespace AccountingApp.Services
         Task AddAsync(Income income);
         Task UpdateAsync(Income income);
         Task DeleteAsync(int id);
+        // New method for Receivables
+        Task<decimal> GetTotalReceivablesAsync(int userId);
     }
 
     public class IncomeService : IIncomeService
@@ -80,5 +82,13 @@ namespace AccountingApp.Services
                 await _context.SaveChangesAsync();
             }
         }
+
+         public async Task<decimal> GetTotalReceivablesAsync(int userId)
+        {
+            return await _context.Incomes
+                .Where(i => i.UserId == userId && !i.IsPaid) // IsPaid = false means udhaar
+                .SumAsync(i => i.Amount);
+        }
+
     }
 }

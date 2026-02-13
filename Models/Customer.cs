@@ -19,6 +19,8 @@ namespace AccountingApp.Models
 
         public decimal? OpeningBalance { get; set; } = 0;
 
+        public decimal? CreditLimit { get; set; } = 5000; // Default 5000
+
         public DateTime? CreatedDate { get; set; } = DateTime.Now;
 
         public DateTime? UpdatedDate { get; set; }

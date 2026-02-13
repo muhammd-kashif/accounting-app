@@ -1,4 +1,4 @@
-@page "/invoice/{SaleId:int}"
+         @page "/invoice/{SaleId:int}"
 @rendermode InteractiveServer
 @using AccountingApp.Services
 @using AccountingApp.Models
@@ -160,22 +160,30 @@ else
                                     <span>Rs. @invoice.Sale.TotalAmount.ToString("N2")</span>
                                 </div>
                             </div>
-                            <div class="border-t pt-3 space-y-2">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">Amount Paid:</span>
-                                    <span class="font-semibold text-green-600">Rs. @invoice.Sale.PaidAmount.ToString("N2")</span>
+                             <div class="border-t pt-3 space-y-2">
+                                <div class="font-bold text-gray-700 mb-2">Payment History:</div>
+                                @foreach (var payment in invoice.Sale.Payments.OrderBy(p => p.PaymentDate))
+                                {
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-500">@payment.PaymentDate.ToString("dd MMM yyyy") (@payment.PaymentMethod):</span>
+                                        <span class="font-medium text-green-700">Rs. @payment.Amount.ToString("N2")</span>
+                                    </div>
+                                }
+                                <div class="flex justify-between border-t pt-2 mt-2">
+                                    <span class="text-gray-900 font-bold">Total Paid:</span>
+                                    <span class="font-bold text-green-600">Rs. @invoice.Sale.PaidAmount.ToString("N2")</span>
                                 </div>
                                 @if (invoice.Sale.RemainingAmount > 0)
                                 {
                                     <div class="flex justify-between">
-                                        <span class="text-gray-600">Balance Due:</span>
-                                        <span class="font-semibold text-red-600">Rs. @invoice.Sale.RemainingAmount.ToString("N2")</span>
+                                        <span class="text-gray-900 font-bold">Balance Due:</span>
+                                        <span class="font-bold text-red-600 text-lg">Rs. @invoice.Sale.RemainingAmount.ToString("N2")</span>
                                     </div>
                                 }
                                 else
                                 {
-                                    <div class="text-center">
-                                        <span class="px-4 py-2 bg-green-100 text-green-800 rounded-lg font-semibold">✓ PAID IN FULL</span>
+                                    <div class="text-center pt-2">
+                                        <span class="px-4 py-2 bg-green-100 text-green-800 rounded-lg font-semibold block">✓ PAID IN FULL</span>
                                     </div>
                                 }
                             </div>
@@ -374,7 +382,19 @@ else
 
         try
         {
-            await SaleService.UpdateAsync(editSale);
+            // For simple editing in invoice view, we just update/replace the current payments
+            var payments = new List<SalePayment> 
+            { 
+                new SalePayment 
+                { 
+                    Amount = editSale.PaidAmount, 
+                    PaymentMethod = editSale.PaymentType, 
+                    PaymentDate = DateTime.Now,
+                    UserId = editSale.UserId,
+                    SaleId = editSale.Id
+                } 
+            };
+            await SaleService.UpdateAsync(editSale, payments);
             await LoadInvoice(); // Refresh data
             showEditModal = false;
             await JSRuntime.InvokeVoidAsync("alert", "Invoice updated successfully! Changes have been synced with the income ledger.");

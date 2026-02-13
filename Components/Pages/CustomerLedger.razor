@@ -1,0 +1,95 @@
+@page "/customer-ledger/{customerid:int}"
+@inject ICustomerService CustomerService
+@inject NavigationManager Navigation
+
+<!-- <h3 class="text-blue-700 font-bold text-xl mb-4 cursor-pointer" @onclick="GoBack">
+    ← Back to All Customers
+</h3> -->
+<button class="btn btn-secondary" type="button" @onclick="GoBack">← Back to Customers</button>
+
+
+@if (isLoading)
+{
+    <p class="text-gray-500">Loading ledger...</p>
+}
+else if (customer == null)
+{
+    <p class="text-red-500 font-semibold">Customer not found!</p>
+}
+else
+{
+    <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+        <h2 class="text-2xl font-bold mb-1">@customer.Name</h2>
+        <p class="text-gray-600 mb-4">Phone: @customer.Phone</p>
+
+        <div class="grid grid-cols-3 gap-4">
+            <div class="bg-gray-100 rounded-lg p-4 text-center">
+                <div class="text-gray-500 uppercase text-xs">Opening Balance</div>
+                <div class="font-bold text-lg">Rs. @customer.OpeningBalance</div>
+            </div>
+            <div class="bg-green-100 rounded-lg p-4 text-center">
+                <div class="text-gray-500 uppercase text-xs">Total Sales</div>
+                <div class="font-bold text-lg text-green-700">Rs. @customer.TotalSales</div>
+            </div>
+            <div class="bg-blue-100 rounded-lg p-4 text-center">
+                <div class="text-gray-500 uppercase text-xs">Total Received</div>
+                <div class="font-bold text-lg text-blue-700">Rs. @customer.TotalReceived</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <h3 class="font-semibold text-gray-700 mb-3">Ledger Entries</h3>
+
+        <table class="min-w-full table-auto border border-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-2 text-left text-gray-600 uppercase text-xs">Date</th>
+                    <th class="px-4 py-2 text-left text-gray-600 uppercase text-xs">Description</th>
+                    <th class="px-4 py-2 text-right text-gray-600 uppercase text-xs">Debit</th>
+                    <th class="px-4 py-2 text-right text-gray-600 uppercase text-xs">Credit</th>
+                    <th class="px-4 py-2 text-right text-gray-600 uppercase text-xs">Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var entry in ledgerEntries)
+                {   
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-2">@entry.Date.ToString("dd MMM yyyy")</td>
+                        <td class="px-4 py-2">@entry.Description</td>
+                        <td class="px-4 py-2 text-right text-red-600">@entry.Debit</td>
+                        <td class="px-4 py-2 text-right text-green-600">@entry.Credit</td>
+                        <td class="px-4 py-2 text-right font-bold">@entry.Balance</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int customerid { get; set; }
+
+    private CustomerBalanceDto? customer;
+    private List<LedgerEntry> ledgerEntries = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLedger();
+    }
+
+    private async Task LoadLedger()
+    {
+        isLoading = true;
+        customer = await CustomerService.GetCustomerBalanceByIdAsync(customerid);
+        ledgerEntries = await CustomerService.GetCustomerLedgerAsync(customerid, null, null);
+        isLoading = false;
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/customers");
+    }
+}

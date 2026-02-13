@@ -10,11 +10,9 @@ namespace AccountingApp.Models
         [Required]
         public DateTime? Date { get; set; } = DateTime.Now;
 
-        [Required]
-        public int CustomerId { get; set; }
-
+        public int? CustomerId { get; set; }
         [ForeignKey("CustomerId")]
-        public virtual Customer Customer { get; set; } = null!;
+        public virtual Customer? Customer { get; set; }
 
         [Required]
         [Range(0.01, double.MaxValue)]
@@ -30,5 +28,6 @@ namespace AccountingApp.Models
         public int? SaleId { get; set; }
 
         public DateTime? CreatedDate { get; set; } = DateTime.Now;
+        public bool IsPaid { get; set; } = false;
     }
 }
