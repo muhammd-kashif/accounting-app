@@ -71,33 +71,76 @@ namespace AccountingApp.Services
             _context.Bills.Add(bill);
             await _context.SaveChangesAsync();
 
-            // Update stock for each item (increase stock on bill/purchase)
+            // Update stock for Inventory items and create Expense for Non-Inventory items
             foreach (var item in bill.Items)
             {
-                await _productService.UpdateStockAsync(item.ProductId, item.Quantity);
+                var product = await _context.Products
+                    .FirstOrDefaultAsync(p => p.Id == item.ProductId);
+
+                if (product != null)
+                {
+                    // If Inventory item, update stock
+                    if (product.ItemType == "Inventory")
+                    {
+                        await _productService.UpdateStockAsync(item.ProductId, item.Quantity);
+                    }
+                    // If Non-Inventory or Service, create Expense record
+                    else if (product.ItemType == "Non-Inventory" || product.ItemType == "Service")
+                    {
+                        var expense = new Expense
+                        {
+                            Date = bill.BillDate,
+                            Category = product.ItemType == "Service" ? "Service" : "Non-Inventory Bill",
+                            Amount = item.Amount,
+                            Description = $"Bill: {product.ItemName} (Qty: {item.Quantity}) - Bill #: {bill.BillNumber}",
+                            UserId = bill.UserId,
+                            CreatedDate = DateTime.Now
+                        };
+                        _context.Expenses.Add(expense);
+                    }
+                }
             }
+
+            await _context.SaveChangesAsync();
         }
 
         public async Task DeleteAsync(int id)
         {
             var bill = await _context.Bills
                 .Include(b => b.Items)
+                    .ThenInclude(i => i.Product)
                 .Include(b => b.Payments)
                 .FirstOrDefaultAsync(b => b.Id == id);
 
             if (bill != null)
             {
-                // Remove linked Expenses from payments
-                var paymentIds = bill.Payments.Select(p => p.Id).ToList();
-                var expenses = await _context.Expenses
-                    .Where(e => e.BillPaymentId != null && paymentIds.Contains(e.BillPaymentId.Value))
-                    .ToListAsync();
-                _context.Expenses.RemoveRange(expenses);
 
-                // Reverse stock
+                // Reverse stock for Inventory items and delete Expense for Non-Inventory
+
                 foreach (var item in bill.Items)
                 {
-                    await _productService.UpdateStockAsync(item.ProductId, -item.Quantity);
+                    if (item.Product != null)
+                    {
+                        // If Inventory item, reverse stock
+                        if (item.Product.ItemType == "Inventory")
+                        {
+                            await _productService.UpdateStockAsync(item.ProductId, -item.Quantity);
+                        }
+                        // If Non-Inventory or Service, delete associated Expense
+                        else if (item.Product.ItemType == "Non-Inventory" || item.Product.ItemType == "Service")
+                        {
+                            var relatedExpense = await _context.Expenses
+                                .FirstOrDefaultAsync(e => 
+                                    e.Description.Contains($"Bill: {item.Product.ItemName}") &&
+                                    e.Description.Contains($"Bill #: {bill.BillNumber}") &&
+                                    e.Date.Date == bill.BillDate.Date);
+                            
+                            if (relatedExpense != null)
+                            {
+                                _context.Expenses.Remove(relatedExpense);
+                            }
+                        }
+                    }
                 }
 
                 _context.Bills.Remove(bill);

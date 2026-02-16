@@ -53,6 +53,18 @@
         </div>
     }
 
+    <!-- SEARCH BAR -->
+    <div class="mb-6">
+        <div class="relative max-w-md">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                🔍
+            </span>
+            <input type="text" @bind="searchTerm" @bind:event="oninput" 
+                   class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
+                   placeholder="Search (Category, Description)...">
+        </div>
+    </div>
+
     <!-- Expense Table -->
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
         <div class="overflow-x-auto">
@@ -67,7 +79,13 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var expense in expenses)
+                @if (!GetFilteredExpenses().Any())
+                {
+                    <tr>
+                        <td colspan="5" class="px-6 py-8 text-center text-gray-400">No matching expenses found.</td>
+                    </tr>
+                }
+                @foreach (var expense in GetFilteredExpenses())
                 {
                     <tr class="border-b hover:bg-gray-50">
                         <td class="px-6 py-4">@expense.Date.ToString("yyyy-MM-dd")</td>
@@ -91,6 +109,7 @@
     private Expense newExpense = new();
     private bool showForm = false;
     private bool isEditing = false;
+    private string searchTerm = string.Empty;
     private int currentUserId = 1;
 
     protected override async Task OnInitializedAsync()
@@ -158,5 +177,14 @@
     {
         showForm = false;
         newExpense = new();
+    }
+
+    private IEnumerable<Expense> GetFilteredExpenses()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm)) return expenses;
+        return expenses.Where(e => 
+            (e.Category?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (e.Description?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+        );
     }
 }

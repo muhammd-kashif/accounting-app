@@ -362,7 +362,18 @@
         </div>
     }
 
-    <!-- ============================================ -->
+    <!-- SEARCH BAR -->
+    <div class="mb-6">
+        <div class="relative max-w-md">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                🔍
+            </span>
+            <input type="text" @bind="searchTerm" @bind:event="oninput" 
+                   class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
+                   placeholder="Search (Name, Product, Ref #)...">
+        </div>
+    </div>
+
     <!-- TABS: Purchases | Suppliers List              -->
     <!-- ============================================ -->
     <div class="flex gap-2 mb-4">
@@ -392,17 +403,25 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if (!purchases.Any())
+                        @if (!GetFilteredPurchases().Any())
                         {
                             <tr>
-                                <td colspan="7" class="px-4 py-8 text-center text-gray-400">No purchases yet. Click "Add Supplier" to start.</td>
+                                <td colspan="7" class="px-4 py-8 text-center text-gray-400">No matching purchases found.</td>
                             </tr>
                         }
-                        @foreach (var purchase in purchases)
+                        @foreach (var purchase in GetFilteredPurchases())
                         {
                             <tr class="border-b hover:bg-gray-50">
                                 <td class="px-4 py-3 text-sm">@purchase.Date.ToString("dd MMM yyyy")</td>
-                                <td class="px-4 py-3 font-semibold">@purchase.Supplier?.SupplierName</td>
+                                <td class="px-4 py-3 font-semibold">
+                                    <div class="flex items-center gap-2">
+                                        <span>@purchase.Supplier?.SupplierName</span>
+                                        @if (purchase.Supplier != null)
+                                        {
+                                            <button @onclick="() => StartEditSupplier(purchase.Supplier)" class="text-blue-500 hover:text-blue-700 text-xs" title="Edit Supplier">✏️</button>
+                                        }
+                                    </div>
+                                </td>
                                 <td class="px-4 py-3 text-sm text-gray-600">
                                     @string.Join(", ", purchase.Items.Select(i => $"{i.Product?.ItemName} x{i.Quantity}"))
                                 </td>
@@ -430,30 +449,40 @@
     {
         <div class="bg-white rounded-lg shadow-md overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="w-full min-w-[700px]">
+                <table class="w-full min-w-[800px]">
                     <thead class="bg-gray-200">
                         <tr>
                             <th class="px-4 py-3 text-left font-semibold">Vendor Name</th>
                             <th class="px-4 py-3 text-left font-semibold">Phone</th>
                             <th class="px-4 py-3 text-left font-semibold">Address</th>
                             <th class="px-4 py-3 text-left font-semibold">Email</th>
+                            <th class="px-4 py-3 text-right font-semibold">Opening Balance</th>
+                            <th class="px-4 py-3 text-right font-semibold text-orange-600">💳 Remaining</th>
                             <th class="px-4 py-3 text-center font-semibold">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @if (!suppliers.Any())
+                        @if (!GetFilteredSuppliers().Any())
                         {
                             <tr>
-                                <td colspan="5" class="px-4 py-8 text-center text-gray-400">No suppliers yet.</td>
+                                <td colspan="7" class="px-4 py-8 text-center text-gray-400">No matching suppliers found.</td>
                             </tr>
                         }
-                        @foreach (var supplier in suppliers)
+                        @foreach (var supplier in GetFilteredSuppliers())
                         {
+                            var totalPurchases = purchases.Where(p => p.SupplierId == supplier.Id).Sum(p => p.TotalAmount);
+                            var remaining = supplier.OpeningBalance + totalPurchases;
                             <tr class="border-b hover:bg-gray-50">
                                 <td class="px-4 py-3 font-semibold">@supplier.SupplierName</td>
                                 <td class="px-4 py-3">@supplier.Contact</td>
                                 <td class="px-4 py-3">@supplier.Address</td>
                                 <td class="px-4 py-3">@supplier.Email</td>
+                                <td class="px-4 py-3 text-right">@supplier.OpeningBalance.ToString("C")</td>
+                                <td class="px-4 py-3 text-right">
+                                    <span class="@(remaining > 0 ? "text-orange-600 font-bold" : "text-gray-600")">
+                                        @remaining.ToString("C")
+                                    </span>
+                                </td>
                                 <td class="px-4 py-3 text-center">
                                     <button @onclick="() => StartEditSupplier(supplier)" class="bg-blue-500 text-white px-3 py-1 rounded text-sm mr-1">✏️ Edit</button>
                                     <button @onclick="() => DeleteSupplier(supplier.Id)" class="bg-red-500 text-white px-3 py-1 rounded text-sm">🗑️</button>
@@ -478,6 +507,7 @@
     private bool showPurchaseForm = false;
     private bool showEditForm = false;
     private bool showDetail = false;
+    private string searchTerm = string.Empty;
     private Purchase? detailPurchase;
     private int currentUserId = 1;
 
@@ -751,7 +781,28 @@
         await JSRuntime.InvokeVoidAsync("print");
     }
 
-    // ========== HELPERS ==========
+    // ========== FILTERING ==========
+    private IEnumerable<Purchase> GetFilteredPurchases()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm)) return purchases;
+        return purchases.Where(p => 
+            (p.Supplier?.SupplierName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (p.ReferenceNo?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (p.Items?.Any(i => i.Product?.ItemName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ?? false)
+        );
+    }
+
+    private IEnumerable<Supplier> GetFilteredSuppliers()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm)) return suppliers;
+        return suppliers.Where(s => 
+            (s.SupplierName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (s.Contact?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (s.Email?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (s.Address?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+        );
+    }
+
     private string GetPaymentBadge(string method) => method switch
     {
         "Cash" => "bg-green-100 text-green-800",

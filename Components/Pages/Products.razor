@@ -7,7 +7,7 @@
 
 <div class="p-4 md:p-8 bg-gray-100 min-h-screen">
     <div class="mb-6 md:mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-        <h1 class="text-4xl font-bold text-gray-800">📦 Products & Services</h1>
+        <h1 class="text-4xl font-bold text-gray-800">📦 Stock Management</h1>
         <button @onclick="OpenAddForm" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg w-full md:w-auto">
             ➕ New Item
         </button>
@@ -98,79 +98,172 @@
     <!-- Summary Cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div class="bg-white rounded-lg shadow p-4 text-center">
-            <p class="text-sm text-gray-500">Total Items</p>
-            <p class="text-2xl font-bold text-indigo-600">@products.Count</p>
+            <p class="text-sm text-gray-500">📦 Inventory Items</p>
+            <p class="text-2xl font-bold text-indigo-600">@products.Count(p => p.ItemType == "Inventory")</p>
+            <p class="text-xs text-gray-400 mt-1">Stock Tracked</p>
         </div>
         <div class="bg-white rounded-lg shadow p-4 text-center">
-            <p class="text-sm text-gray-500">Total Stock</p>
-            <p class="text-2xl font-bold text-green-600">@products.Sum(p => p.StockQuantity)</p>
+            <p class="text-sm text-gray-500">📋 Non-Inventory</p>
+            <p class="text-2xl font-bold text-purple-600">@products.Count(p => p.ItemType != "Inventory")</p>
+            <p class="text-xs text-gray-400 mt-1">No Stock Track</p>
         </div>
         <div class="bg-white rounded-lg shadow p-4 text-center">
-            <p class="text-sm text-gray-500">Stock Value (Cost)</p>
-            <p class="text-2xl font-bold text-blue-600">@products.Sum(p => p.PurchasePrice * p.StockQuantity).ToString("C")</p>
+            <p class="text-sm text-gray-500">Total Stock Qty</p>
+            <p class="text-2xl font-bold text-green-600">@products.Where(p => p.ItemType == "Inventory").Sum(p => p.StockQuantity)</p>
+            <p class="text-xs text-gray-400 mt-1">Inventory Only</p>
         </div>
         <div class="bg-white rounded-lg shadow p-4 text-center">
-            <p class="text-sm text-gray-500">Stock Value (Sale)</p>
-            <p class="text-2xl font-bold text-orange-600">@products.Sum(p => p.SalePrice * p.StockQuantity).ToString("C")</p>
+            <p class="text-sm text-gray-500">Stock Value</p>
+            <p class="text-2xl font-bold text-orange-600">@products.Where(p => p.ItemType == "Inventory").Sum(p => p.PurchasePrice * p.StockQuantity).ToString("C")</p>
+            <p class="text-xs text-gray-400 mt-1">Inventory Cost</p>
         </div>
     </div>
 
-    <!-- Products Table -->
-    <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[900px]">
-                <thead class="bg-gray-200">
-                    <tr>
-                        <th class="px-4 py-3 text-left font-semibold">Item Name</th>
-                        <th class="px-4 py-3 text-left font-semibold">Type</th>
-                        <th class="px-4 py-3 text-left font-semibold">SKU</th>
-                        <th class="px-4 py-3 text-right font-semibold">Cost Price</th>
-                        <th class="px-4 py-3 text-right font-semibold">Sale Price</th>
-                        <th class="px-4 py-3 text-right font-semibold">Stock</th>
-                        <th class="px-4 py-3 text-center font-semibold">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (!products.Any())
-                    {
-                        <tr>
-                            <td colspan="7" class="px-4 py-8 text-center text-gray-400">
-                                No items yet. Click "New Item" to add your first product.
-                            </td>
-                        </tr>
-                    }
-                    @foreach (var product in products)
-                    {
-                        var pid = product.Id;
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="px-4 py-3 font-semibold">@product.ItemName</td>
-                            <td class="px-4 py-3">
-                                <span class="px-2 py-1 rounded text-xs font-medium @GetTypeBadge(product.ItemType)">
-                                    @product.ItemType
-                                </span>
-                            </td>
-                            <td class="px-4 py-3 text-gray-500">@product.SKU</td>
-                            <td class="px-4 py-3 text-right">@product.PurchasePrice.ToString("C")</td>
-                            <td class="px-4 py-3 text-right text-green-600 font-semibold">@product.SalePrice.ToString("C")</td>
-                            <td class="px-4 py-3 text-right">
-                                <span class="@(product.StockQuantity <= product.ReorderLevel ? "text-red-600 font-bold" : "text-gray-800")">
-                                    @product.StockQuantity
-                                </span>
-                            </td>
-                            <td class="px-4 py-3 text-center">
-                                <button @onclick="() => OpenEditForm(pid)" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded mr-1 text-sm">
-                                    ✏️ Edit
-                                </button>
-                                <button @onclick="() => HandleDelete(pid)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
-                                    🗑️ Delete
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+    <!-- SEARCH BAR -->
+    <div class="mb-6">
+        <div class="relative max-w-md">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                🔍
+            </span>
+            <input type="text" @bind="searchTerm" @bind:event="oninput" 
+                   class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
+                   placeholder="Search (Name, SKU, Type)...">
         </div>
     </div>
+
+    <!-- Tab Navigation -->
+    <div class="mb-4 border-b border-gray-200">
+        <nav class="-mb-px flex space-x-8">
+            <button @onclick='() => activeTab = "inventory"' 
+                    class="@(activeTab == "inventory" ? "border-indigo-500 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300") whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                📦 Inventory Items (@products.Count(p => p.ItemType == "Inventory"))
+            </button>
+            <button @onclick='() => activeTab = "non-inventory"' 
+                    class="@(activeTab == "non-inventory" ? "border-purple-500 text-purple-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300") whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                📋 Non-Inventory / Services (@products.Count(p => p.ItemType != "Inventory"))
+            </button>
+        </nav>
+    </div>
+
+    <!-- Inventory Items Table -->
+    @if (activeTab == "inventory")
+    {
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="bg-blue-50 px-4 py-3 border-b border-blue-200">
+                <p class="text-sm text-blue-800">
+                    <strong>📦 Inventory Items:</strong> Stock is tracked with quantity, cost, and reorder levels. These items are stored in warehouse.
+                </p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[900px]">
+                    <thead class="bg-gray-200">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-semibold">Item Name</th>
+                            <th class="px-4 py-3 text-left font-semibold">SKU</th>
+                            <th class="px-4 py-3 text-right font-semibold">Cost Price</th>
+                            <th class="px-4 py-3 text-right font-semibold">Sale Price</th>
+                            <th class="px-4 py-3 text-right font-semibold">Stock Qty</th>
+                            <th class="px-4 py-3 text-right font-semibold">Reorder Level</th>
+                            <th class="px-4 py-3 text-center font-semibold">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!GetFilteredInventoryProducts().Any())
+                        {
+                            <tr>
+                                <td colspan="7" class="px-4 py-8 text-center text-gray-400">
+                                    No inventory items found.
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var product in GetFilteredInventoryProducts())
+                        {
+                            var pid = product.Id;
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="px-4 py-3 font-semibold">@product.ItemName</td>
+                                <td class="px-4 py-3 text-gray-500">@product.SKU</td>
+                                <td class="px-4 py-3 text-right">@product.PurchasePrice.ToString("C")</td>
+                                <td class="px-4 py-3 text-right text-green-600 font-semibold">@product.SalePrice.ToString("C")</td>
+                                <td class="px-4 py-3 text-right">
+                                    <span class="@(product.StockQuantity <= product.ReorderLevel ? "text-red-600 font-bold" : "text-gray-800")">
+                                        @product.StockQuantity
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-right text-gray-500">@product.ReorderLevel</td>
+                                <td class="px-4 py-3 text-center">
+                                    <button @onclick="() => OpenEditForm(pid)" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded mr-1 text-sm">
+                                        ✏️ Edit
+                                    </button>
+                                    <button @onclick="() => HandleDelete(pid)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
+                                        🗑️ Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <!-- Non-Inventory Items Table -->
+    @if (activeTab == "non-inventory")
+    {
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="bg-purple-50 px-4 py-3 border-b border-purple-200">
+                <p class="text-sm text-purple-800">
+                    <strong>📋 Non-Inventory Items:</strong> No stock tracking. Used for services, one-time purchases, and office supplies that don't need quantity management.
+                </p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[800px]">
+                    <thead class="bg-gray-200">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-semibold">Item Name</th>
+                            <th class="px-4 py-3 text-left font-semibold">Type</th>
+                            <th class="px-4 py-3 text-left font-semibold">SKU</th>
+                            <th class="px-4 py-3 text-right font-semibold text-red-600">💸 Expense</th>
+                            <th class="px-4 py-3 text-right font-semibold text-green-600">💰 Income</th>
+                            <th class="px-4 py-3 text-center font-semibold">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!GetFilteredNonInventoryProducts().Any())
+                        {
+                            <tr>
+                                <td colspan="6" class="px-4 py-8 text-center text-gray-400">
+                                    No non-inventory items found.
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var product in GetFilteredNonInventoryProducts())
+                        {
+                            var pid = product.Id;
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="px-4 py-3 font-semibold">@product.ItemName</td>
+                                <td class="px-4 py-3">
+                                    <span class="px-2 py-1 rounded text-xs font-medium @GetTypeBadge(product.ItemType)">
+                                        @product.ItemType
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 text-gray-500">@product.SKU</td>
+                                <td class="px-4 py-3 text-right text-red-600 font-semibold">@product.PurchasePrice.ToString("C")</td>
+                                <td class="px-4 py-3 text-right text-green-600 font-semibold">@product.SalePrice.ToString("C")</td>
+                                <td class="px-4 py-3 text-center">
+                                    <button @onclick="() => OpenEditForm(pid)" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded mr-1 text-sm">
+                                        ✏️ Edit
+                                    </button>
+                                    <button @onclick="() => HandleDelete(pid)" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
+                                        🗑️ Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -182,6 +275,8 @@
     private int editingId = 0;
     private int currentUserId = 1;
     private string formError = string.Empty;
+    private string searchTerm = string.Empty;
+    private string activeTab = "inventory";
 
     // Form fields (separate from model to avoid binding issues)
     private string formName = string.Empty;
@@ -328,6 +423,37 @@
     {
         showForm = false;
         formError = string.Empty;
+    }
+
+    private IEnumerable<Product> GetFilteredProducts()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm)) return products;
+        return products.Where(p => 
+            (p.ItemName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (p.SKU?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (p.ItemType?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+        );
+    }
+
+    private IEnumerable<Product> GetFilteredInventoryProducts()
+    {
+        var inventoryItems = products.Where(p => p.ItemType == "Inventory");
+        if (string.IsNullOrWhiteSpace(searchTerm)) return inventoryItems;
+        return inventoryItems.Where(p => 
+            (p.ItemName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (p.SKU?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+        );
+    }
+
+    private IEnumerable<Product> GetFilteredNonInventoryProducts()
+    {
+        var nonInventoryItems = products.Where(p => p.ItemType != "Inventory");
+        if (string.IsNullOrWhiteSpace(searchTerm)) return nonInventoryItems;
+        return nonInventoryItems.Where(p => 
+            (p.ItemName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (p.SKU?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (p.ItemType?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+        );
     }
 
     private string GetTypeBadge(string type) => type switch

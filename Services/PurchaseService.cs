@@ -51,47 +51,77 @@ namespace AccountingApp.Services
             _context.Purchases.Add(purchase);
             await _context.SaveChangesAsync();
 
-            // Create corresponding Expense record
-            var supplier = await _context.Suppliers.FindAsync(purchase.SupplierId);
-            var expense = new Expense
-            {
-                Date = purchase.Date,
-                Category = "Purchase",
-                Amount = purchase.TotalAmount,
-                Description = $"Purchase from {supplier?.SupplierName ?? "Unknown Supplier"} (Ref: {purchase.ReferenceNo})",
-                UserId = purchase.UserId,
-                PurchaseId = purchase.Id,
-                CreatedDate = DateTime.Now
-            };
-            _context.Expenses.Add(expense);
-            await _context.SaveChangesAsync();
 
-            // Update stock for each item (increase stock on purchase)
+            // Update stock for Inventory items and create Expense for Non-Inventory items
+
             foreach (var item in purchase.Items)
             {
-                await _productService.UpdateStockAsync(item.ProductId, item.Quantity);
+                var product = await _context.Products
+                    .FirstOrDefaultAsync(p => p.Id == item.ProductId);
+
+                if (product != null)
+                {
+                    // If Inventory item, update stock
+                    if (product.ItemType == "Inventory")
+                    {
+                        await _productService.UpdateStockAsync(item.ProductId, item.Quantity);
+                    }
+                    // If Non-Inventory or Service, create Expense record
+                    else if (product.ItemType == "Non-Inventory" || product.ItemType == "Service")
+                    {
+                        var expense = new Expense
+                        {
+                            Date = purchase.Date,
+                            Category = product.ItemType == "Service" ? "Service" : "Non-Inventory Purchase",
+                            Amount = item.Amount,
+                            Description = $"Purchase: {product.ItemName} (Qty: {item.Quantity}) - Ref: {purchase.ReferenceNo}",
+                            UserId = purchase.UserId,
+                            CreatedDate = DateTime.Now
+                        };
+                        _context.Expenses.Add(expense);
+                    }
+                }
             }
+
+            await _context.SaveChangesAsync();
         }
 
         public async Task DeleteAsync(int id)
         {
             var purchase = await _context.Purchases
                 .Include(p => p.Items)
+                    .ThenInclude(i => i.Product)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (purchase != null)
             {
-                // Remove linked Expense record
-                var expense = await _context.Expenses.FirstOrDefaultAsync(e => e.PurchaseId == id);
-                if (expense != null)
-                {
-                    _context.Expenses.Remove(expense);
-                }
 
-                // Reverse stock changes
+                // Reverse stock changes for Inventory items and delete Expense for Non-Inventory
+
                 foreach (var item in purchase.Items)
                 {
-                    await _productService.UpdateStockAsync(item.ProductId, -item.Quantity);
+                    if (item.Product != null)
+                    {
+                        // If Inventory item, reverse stock
+                        if (item.Product.ItemType == "Inventory")
+                        {
+                            await _productService.UpdateStockAsync(item.ProductId, -item.Quantity);
+                        }
+                        // If Non-Inventory or Service, delete associated Expense
+                        else if (item.Product.ItemType == "Non-Inventory" || item.Product.ItemType == "Service")
+                        {
+                            var relatedExpense = await _context.Expenses
+                                .FirstOrDefaultAsync(e => 
+                                    e.Description.Contains($"Purchase: {item.Product.ItemName}") &&
+                                    e.Description.Contains($"Ref: {purchase.ReferenceNo}") &&
+                                    e.Date.Date == purchase.Date.Date);
+                            
+                            if (relatedExpense != null)
+                            {
+                                _context.Expenses.Remove(relatedExpense);
+                            }
+                        }
+                    }
                 }
 
                 _context.Purchases.Remove(purchase);

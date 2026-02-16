@@ -35,6 +35,18 @@
         </div>
     </div>
 
+    <!-- SEARCH BAR -->
+    <div class="mb-6">
+        <div class="relative max-w-md">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                🔍
+            </span>
+            <input type="text" @bind="searchTerm" @bind:event="oninput" 
+                   class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
+                   placeholder="Search (Vendor, Bill #, Status)...">
+        </div>
+    </div>
+
     <!-- Add Bill Modal -->
     @if (showForm)
     {
@@ -162,7 +174,13 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var bill in bills)
+                    @if (!GetFilteredBills().Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="px-4 py-8 text-center text-gray-400">No matching bills found.</td>
+                        </tr>
+                    }
+                    @foreach (var bill in GetFilteredBills())
                     {
                         <tr class="border-b hover:bg-gray-50">
                             <td class="px-4 py-3 font-mono font-semibold text-indigo-600">@bill.BillNumber</td>
@@ -203,6 +221,7 @@
     private DateTime billDate = DateTime.Today;
     private DateTime dueDate = DateTime.Today.AddDays(30);
     private bool showForm = false;
+    private string searchTerm = string.Empty;
     private int currentUserId = 1;
 
     protected override async Task OnInitializedAsync()
@@ -304,4 +323,14 @@
         "Unpaid" => "bg-red-100 text-red-800",
         _ => "bg-gray-100 text-gray-800"
     };
+
+    private IEnumerable<Bill> GetFilteredBills()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm)) return bills;
+        return bills.Where(b => 
+            (b.Supplier?.SupplierName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (b.BillNumber?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (b.Status?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+        );
+    }
 }
