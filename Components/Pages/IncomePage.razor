@@ -37,33 +37,62 @@
 
     @* Advanced Filters *@
     <div class="bg-white p-5 rounded-2xl shadow-sm mb-8 flex flex-wrap gap-4 items-end border border-gray-100">
-        <div class="flex-1 min-w-[250px]">
-            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Search Customer / Description</label>
-            <div class="relative">
-                <input type="text" @bind="searchText" @bind:event="oninput" placeholder="Search accounts..." class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all">
-                <span class="absolute left-3 top-3.5 text-gray-400">🔍</span>
-            </div>
-        </div>
-        <div class="w-full md:w-48">
-            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">From Date</label>
-            <input type="date" @bind="startDate" class="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="w-full md:w-48">
-            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">To Date</label>
-            <input type="date" @bind="endDate" class="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-        <div class="w-full md:w-40">
-            <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Method</label>
-            <select @bind="paymentFilter" class="w-full px-4 py-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">All Types</option>
-                <option value="Cash">💵 Cash</option>
-                <option value="Bank">🏦 Bank</option>
-                <option value="Card">💳 Card</option>
-                <option value="Cheque">📄 Cheque</option>
-            </select>
-        </div>
-        <div class="flex gap-2">
-            <button @onclick="ResetFilters" class="px-6 py-3 text-gray-500 hover:text-blue-600 font-bold transition-colors">
+        <!-- <div class="flex gap-4 mb-4 flex-wrap"> -->
+    <!-- Search box -->
+    <div class="flex-1 min-w-[250px]">
+        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Search Customer / Description</label>
+        <input type="text" @bind="searchText" @bind:event="oninput" placeholder="Search..." class="w-full px-4 py-2 border rounded-lg" />
+    </div>
+
+    <!-- From Date -->
+    <div>
+        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">From Date</label>
+        <input type="date" @bind="startDate" class="px-4 py-2 border rounded-lg" />
+    </div>
+
+    <!-- To Date -->
+    <div>
+        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">To Date</label>
+        <input type="date" @bind="endDate" class="px-4 py-2 border rounded-lg" />
+    </div>
+
+    <!-- Payment Type -->
+    <div>
+        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Payment Type</label>
+        <select @bind="paymentFilter" class="px-3 py-2 border rounded-lg">
+            <option value="">All</option>
+            <option value="Cash">💵 Cash</option>
+            <option value="Bank">🏦 Bank</option>
+            <option value="Card">💳 Card</option>
+            <option value="Cheque">📄 Cheque</option>
+        </select>
+    </div>
+
+    <!-- Payment Status -->
+    <div>
+        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Payment Status</label>
+        <select @bind="paymentStatusFilter" class="px-3 py-2 border rounded-lg">
+            <option value="">All</option>
+            <option value="paid">Paid</option>
+            <option value="due">Due</option>
+            <option value="overdue">Overdue</option>
+        </select>
+    </div>
+
+    <!-- Sorting -->
+    <div>
+        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Sort By</label>
+        <select @bind="selectedSort" class="px-3 py-2 border rounded-lg">
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+            <option value="highamount">Highest Amount</option>
+            <option value="lowamount">Lowest Amount</option>
+        </select>
+    </div>
+
+    <!-- Reset Button -->
+    <div class="flex gap-2 items-end">
+         <button @onclick="ResetFilters" class="px-6 py-3 text-gray-500 hover:text-blue-600 font-bold transition-colors">
                 Reset
             </button>
             <button @onclick="ExportToCsv" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 shadow-md">
@@ -72,7 +101,10 @@
             <button @onclick="ExportToPdf" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 shadow-md">
                 📄 PDF
             </button>
-        </div>
+    </div>
+
+
+       
     </div>
 
     <!-- Add/Edit Modal -->
@@ -84,6 +116,20 @@
                     <h2 class="text-2xl font-semibold">@(isEditing ? "Edit Income" : "Add New Income")</h2>
                     <button @onclick="CancelForm" class="text-gray-500 hover:text-gray-700 text-xl">✖</button>
                 </div>
+
+                <div class="w-full md:w-56">
+                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Sort / Filter</label>
+                <select @bind="selectedSort" class="w-full px-3 py-2 border rounded-lg">
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="due">Pending Dues</option>
+                    <option value="overdue">Overdue</option>
+                    <option value="paid">Paid Sales</option>
+                    <option value="highamount">Highest Amount</option>
+                    <option value="lowamount">Lowest Amount</option>
+                </select>
+            </div>
+
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <input type="date" @bind="newIncome.Date" class="md:col-span-2 px-4 py-2 border rounded-lg">
@@ -197,33 +243,65 @@
 </div>
 
 @code {
+    private string selectedSort = "newest";       // Sorting dropdown
+    private string paymentFilter = "";            // Payment Type (Cash/Bank/Card/Cheque)
+    private string paymentStatusFilter = "";      // Payment Status (Paid/Due/Overdue)
+    private string searchText = "";               // Search box
+    private DateTime? startDate;
+    private DateTime? endDate;
     private List<Income> incomes = new();
     private List<Customer> customers = new();
     private Income newIncome = new();
     private bool showForm = false;
-    private string searchText = "";
-    private DateTime? startDate;
-    private DateTime? endDate;
-    private string paymentFilter = "";
     private bool isEditing = false;
     private int currentUserId = 1;
 
+
+
     // Computed Properties for Dashboard
-    private List<Income> FilteredIncomes => incomes
-        .Where(i => 
-            (string.IsNullOrWhiteSpace(searchText) || 
-             (i.Customer?.Name?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) || 
-             (i.Description?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false)) &&
-            (!startDate.HasValue || (i.Date.HasValue && i.Date.Value.Date >= startDate.Value.Date)) &&
-            (!endDate.HasValue || (i.Date.HasValue && i.Date.Value.Date <= endDate.Value.Date)) &&
-            (string.IsNullOrWhiteSpace(paymentFilter) || i.PaymentType == paymentFilter)
-        )
-        .OrderByDescending(i => i.Date)
-        .ToList();
+   private List<Income> FilteredIncomes
+    {
+        get
+        {
+            var query = incomes.Where(s =>
+                (string.IsNullOrWhiteSpace(searchText) ||
+                (s.Customer?.Name?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (s.Description?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+                (!startDate.HasValue || (s.Date.HasValue && s.Date.Value.Date >= startDate.Value.Date)) &&
+                (!endDate.HasValue || (s.Date.HasValue && s.Date.Value.Date <= endDate.Value.Date)) &&
+                (string.IsNullOrWhiteSpace(paymentFilter) || s.PaymentType == paymentFilter)
+            );
+
+            // Payment Status Filter
+            query = paymentStatusFilter switch
+            {
+                "paid" => query.Where(s => s.Amount <= 0),
+                "due" => query.Where(s => s.Amount > 0),
+                "overdue" => query.Where(s =>
+                    s.Amount > 0 &&
+                    s.Date.HasValue &&
+                    DateTime.Now.Date > s.Date.Value.Date),
+                _ => query
+            };
+
+            // Sorting
+            query = selectedSort switch
+            {
+                "highamount" => query.OrderByDescending(s => s.Amount),
+                "lowamount" => query.OrderBy(s => s.Amount),
+                "oldest" => query.OrderBy(s => s.Date),
+                _ => query.OrderByDescending(s => s.Date) // newest by default
+            };
+
+            return query.ToList();
+        }
+    }
 
     private decimal TotalIncome => FilteredIncomes.Sum(i => i.Amount);
     private decimal CashIncome => FilteredIncomes.Where(i => i.PaymentType == "Cash").Sum(i => i.Amount);
     private decimal BankIncome => FilteredIncomes.Where(i => i.PaymentType == "Bank").Sum(i => i.Amount);
+
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -233,6 +311,8 @@
     private async Task LoadData()
     {
         incomes = await IncomeService.GetAllAsync(currentUserId);
+        Console.WriteLine(currentUserId);
+
         customers = await CustomerService.GetAllAsync(currentUserId);
     }
 
@@ -302,6 +382,8 @@
         startDate = null;
         endDate = null;
         paymentFilter = "";
+        paymentStatusFilter = "";
+        selectedSort = "newest";
     }
 
     private void ViewInvoice(int saleId)

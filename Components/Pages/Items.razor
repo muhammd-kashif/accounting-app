@@ -1,0 +1,47 @@
+@page "/inventory"
+@using AccountingApp.Models
+@inject ApplicationDbContext _context
+@using Microsoft.EntityFrameworkCore
+
+
+<h3 class="text-2xl font-bold mb-4">📦 Inventory / Stock List</h3>
+
+<table class="table-auto w-full border-collapse border border-gray-300">
+    <thead>
+        <tr class="bg-gray-200">
+            <th class="border border-gray-300 px-4 py-2">Item</th>
+            <th class="border border-gray-300 px-4 py-2">Category</th>
+            <th class="border border-gray-300 px-4 py-2">Price</th>
+            <th class="border border-gray-300 px-4 py-2">Stock Quantity</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach(var item in items)
+        {
+            <tr class="@GetRowClass(item.StockQuantity)">
+                <td class="border border-gray-300 px-4 py-2">@item.Name</td>
+                <td class="border border-gray-300 px-4 py-2">@item.Category</td>
+                <td class="border border-gray-300 px-4 py-2">@item.Price.ToString("0.00")</td>
+                <td class="border border-gray-300 px-4 py-2">@item.StockQuantity</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Item> items = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        items = await _context.Items.ToListAsync();
+    }
+
+    // Highlight row if stock is low
+    private string GetRowClass(int stockQty)
+    {
+        if(stockQty <= 5) // low stock warning
+            return "bg-red-100 font-bold";
+        else
+            return "";
+    }
+}
