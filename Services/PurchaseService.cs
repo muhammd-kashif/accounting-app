@@ -21,6 +21,7 @@ namespace AccountingApp.Services
         {
             _context = context;
             _productService = productService;
+            
         }
 
         public async Task<List<Purchase>> GetAllAsync(int userId)

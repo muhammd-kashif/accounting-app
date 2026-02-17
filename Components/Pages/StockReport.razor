@@ -26,12 +26,12 @@
         </div>
         <div class="bg-white rounded-lg shadow p-4 text-center">
             <p class="text-sm text-gray-500">Total Purchased</p>
-            <p class="text-3xl font-bold text-blue-600">@totalPurchased</p>
+            <p class="text-3xl font-bold text-blue-600">@totalPurchasedQty</p>
             <p class="text-xs text-gray-400 mt-1">Units</p>
         </div>
         <div class="bg-white rounded-lg shadow p-4 text-center">
             <p class="text-sm text-gray-500">Total Sold</p>
-            <p class="text-3xl font-bold text-orange-600">@totalSold</p>
+            <p class="text-3xl font-bold text-orange-600">@totalSoldQty</p>
             <p class="text-xs text-gray-400 mt-1">Units</p>
         </div>
     </div>
@@ -63,6 +63,7 @@
                         <th class="px-4 py-3 text-center font-semibold">Status</th>
                         <th class="px-4 py-3 text-center font-semibold">Actions</th>
                     </tr>
+    
                 </thead>
                 <tbody>
                     @if (!GetFilteredProducts().Any())
@@ -108,8 +109,8 @@
                     <tr>
                         <td colspan="2" class="px-4 py-3 text-right">Totals:</td>
                         <td class="px-4 py-3 text-right text-gray-800">@inventoryProducts.Sum(p => p.StockQuantity)</td>
-                        <td class="px-4 py-3 text-right text-blue-600">@totalPurchased</td>
-                        <td class="px-4 py-3 text-right text-orange-600">@totalSold</td>
+                        <td class="px-4 py-3 text-right text-blue-600">@totalPurchasedQty</td>
+                        <td class="px-4 py-3 text-right text-orange-600">@totalSoldQty</td>
                         <td class="px-4 py-3 text-right text-green-600">@inventoryProducts.Sum(p => p.StockQuantity * p.PurchasePrice).ToString("C")</td>
                         <td colspan="2"></td>
                     </tr>
@@ -149,78 +150,95 @@
                         </div>
                     </div>
 
-                    <!-- Purchase History -->
-                    <div class="mb-6">
-                        <h3 class="text-lg font-semibold mb-3 text-blue-600">📥 Purchase History</h3>
-                        @if (GetProductPurchases(selectedProduct.Id).Any())
-                        {
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-sm">
-                                    <thead class="bg-blue-50">
-                                        <tr>
-                                            <th class="px-3 py-2 text-left">Date</th>
-                                            <th class="px-3 py-2 text-left">Supplier</th>
-                                            <th class="px-3 py-2 text-right">Quantity</th>
-                                            <th class="px-3 py-2 text-right">Rate</th>
-                                            <th class="px-3 py-2 text-right">Amount</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var item in GetProductPurchases(selectedProduct.Id))
-                                        {
-                                            <tr class="border-b">
-                                                <td class="px-3 py-2">@item.Purchase.Date.ToString("dd MMM yyyy")</td>
-                                                <td class="px-3 py-2">@item.Purchase.Supplier?.SupplierName</td>
-                                                <td class="px-3 py-2 text-right font-semibold">@item.Quantity</td>
-                                                <td class="px-3 py-2 text-right">@item.Rate.ToString("C")</td>
-                                                <td class="px-3 py-2 text-right text-blue-600 font-semibold">@item.Amount.ToString("C")</td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
+                    <!-- History Sections -->
+                    <div class="space-y-6">
+                        <!-- Purchase History -->
+                        <div>
+                            <div class="flex items-center gap-2 mb-3 cursor-pointer select-none hover:bg-gray-100 p-2 rounded transition-colors" @onclick="() => showPurchaseHistory = !showPurchaseHistory">
+                                <span class="text-xl">📥</span>
+                                <h3 class="font-bold text-gray-700">Purchase History</h3>
+                                <span class="text-xs text-gray-400">@(showPurchaseHistory ? "▲ Hide" : "▼ Show")</span>
                             </div>
-                        }
-                        else
-                        {
-                            <p class="text-gray-400 text-center py-4">No purchase history</p>
-                        }
-                    </div>
+                            
+                            @if (showPurchaseHistory)
+                            {
+                                var history = GetProductPurchases(selectedProduct.Id);
+                                @if (history.Any())
+                                {
+                                    <div class="bg-blue-50/50 rounded-lg overflow-hidden border border-blue-100 animate-in fade-in duration-300">
+                                        <table class="w-full text-sm">
+                                            <thead class="bg-blue-100/50">
+                                                <tr>
+                                                    <th class="px-4 py-2 text-left">Date</th>
+                                                    <th class="px-4 py-2 text-left">Supplier</th>
+                                                    <th class="px-4 py-2 text-right">Qty</th>
+                                                    <th class="px-4 py-2 text-right">Rate</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var p in history)
+                                                {
+                                                    <tr class="border-b border-blue-100 last:border-0">
+                                                        <td class="px-4 py-2">@p.Purchase.Date.ToString("dd MMM yy")</td>
+                                                        <td class="px-4 py-2">@p.Purchase.Supplier?.SupplierName</td>
+                                                        <td class="px-4 py-2 text-right font-semibold">@p.Quantity</td>
+                                                        <td class="px-4 py-2 text-right">Rs. @p.Rate.ToString("N0")</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-center text-gray-400 py-4 italic text-sm">No purchase history found</p>
+                                }
+                            }
+                        </div>
 
-                    <!-- Sale History -->
-                    <div>
-                        <h3 class="text-lg font-semibold mb-3 text-orange-600">📤 Sale History</h3>
-                        @if (GetProductSales(selectedProduct.Id).Any())
-                        {
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-sm">
-                                    <thead class="bg-orange-50">
-                                        <tr>
-                                            <th class="px-3 py-2 text-left">Date</th>
-                                            <th class="px-3 py-2 text-left">Customer</th>
-                                            <th class="px-3 py-2 text-right">Quantity</th>
-                                            <th class="px-3 py-2 text-right">Rate</th>
-                                            <th class="px-3 py-2 text-right">Amount</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var item in GetProductSales(selectedProduct.Id))
-                                        {
-                                            <tr class="border-b">
-                                                <td class="px-3 py-2">@item.Sale.SaleDate.ToString("dd MMM yyyy")</td>
-                                                <td class="px-3 py-2">@item.Sale.Customer?.Name</td>
-                                                <td class="px-3 py-2 text-right font-semibold">@item.Quantity</td>
-                                                <td class="px-3 py-2 text-right">@item.UnitPrice.ToString("C")</td>
-                                                <td class="px-3 py-2 text-right text-orange-600 font-semibold">@item.TotalPrice.ToString("C")</td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
+                        <!-- Sale History -->
+                        <div>
+                            <div class="flex items-center gap-2 mb-3 cursor-pointer select-none hover:bg-gray-100 p-2 rounded transition-colors" @onclick="() => showSaleHistory = !showSaleHistory">
+                                <span class="text-xl">📤</span>
+                                <h3 class="font-bold text-gray-700">Sale History</h3>
+                                <span class="text-xs text-gray-400">@(showSaleHistory ? "▲ Hide" : "▼ Show")</span>
                             </div>
-                        }
-                        else
-                        {
-                            <p class="text-gray-400 text-center py-4">No sale history</p>
-                        }
+                            
+                            @if (showSaleHistory)
+                            {
+                                var history = GetProductSales(selectedProduct.Id);
+                                @if (history.Any())
+                                {
+                                    <div class="bg-green-50/50 rounded-lg overflow-hidden border border-green-100 animate-in fade-in duration-300">
+                                        <table class="w-full text-sm">
+                                            <thead class="bg-green-100/50">
+                                                <tr>
+                                                    <th class="px-4 py-2 text-left">Date</th>
+                                                    <th class="px-4 py-2 text-left">Customer</th>
+                                                    <th class="px-4 py-2 text-right">Qty</th>
+                                                    <th class="px-4 py-2 text-right">Price</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var s in history)
+                                                {
+                                                    <tr class="border-b border-green-100 last:border-0">
+                                                        <td class="px-4 py-2">@s.Sale.SaleDate.ToString("dd MMM yy")</td>
+                                                        <td class="px-4 py-2">@s.Sale.Customer?.Name</td>
+                                                        <td class="px-4 py-2 text-right font-semibold">@s.Quantity</td>
+                                                        <td class="px-4 py-2 text-right">Rs. @s.UnitPrice.ToString("N0")</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-center text-gray-400 py-4 italic text-sm">No sale history found</p>
+                                }
+                            }
+                        </div>
                     </div>
                 </div>
             </div>
@@ -232,15 +250,16 @@
     private List<Product> inventoryProducts = new();
     private List<Purchase> purchases = new();
     private List<Sale> sales = new();
-    private List<Item> items = new();
     private string searchTerm = string.Empty;
     private int currentUserId = 1;
     
     private bool showDetailsModal = false;
     private Product? selectedProduct = null;
+    private bool showPurchaseHistory = false;
+    private bool showSaleHistory = false;
     
-    private int totalPurchased = 0;
-    private int totalSold = 0;
+    private int totalPurchasedQty = 0;
+    private int totalSoldQty = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -255,14 +274,14 @@
         sales = await SaleService.GetAllAsync(currentUserId);
         
         // Calculate totals
-        totalPurchased = purchases
+        totalPurchasedQty = purchases
             .SelectMany(p => p.Items)
             .Where(i => inventoryProducts.Any(prod => prod.Id == i.ProductId))
             .Sum(i => i.Quantity);
             
-        totalSold = sales
+        totalSoldQty = sales
             .SelectMany(s => s.SaleItems)
-            .Where(si => inventoryProducts.Any(prod => prod.ItemName == si.Item.Name))
+            .Where(si => si.Item != null && inventoryProducts.Any(prod => prod.ItemName == si.Item.Name))
             .Sum(i => i.Quantity);
     }
 
@@ -293,13 +312,15 @@
         // Match by item name (since Items and Products are separate)
         return sales
             .SelectMany(s => s.SaleItems)
-            .Where(si => si.Item.Name.Equals(product.ItemName, StringComparison.OrdinalIgnoreCase))
+            .Where(si => si.Item != null && si.Item.Name.Equals(product.ItemName, StringComparison.OrdinalIgnoreCase))
             .Sum(i => i.Quantity);
     }
 
     private void ShowDetails(int productId)
     {
         selectedProduct = inventoryProducts.FirstOrDefault(p => p.Id == productId);
+        showPurchaseHistory = false; // Reset toggles when opening details
+        showSaleHistory = false;
         showDetailsModal = true;
     }
 
@@ -312,14 +333,14 @@
     private List<PurchaseItem> GetProductPurchases(int productId)
     {
         return purchases
-            .SelectMany(p => p.Items.Select(i => new { Purchase = p, Item = i }))
+            .SelectMany(p => p.Items.Select(pi => new { Purchase = p, Item = pi }))
             .Where(x => x.Item.ProductId == productId)
-            .Select(x => 
+            .Select(x =>
             {
                 x.Item.Purchase = x.Purchase;
                 return x.Item;
             })
-            .OrderByDescending(i => i.Purchase.Date)
+            .OrderByDescending(pi => pi.Purchase.Date)
             .ToList();
     }
 
@@ -327,11 +348,13 @@
     {
         var product = inventoryProducts.FirstOrDefault(p => p.Id == productId);
         if (product == null) return new List<SaleItem>();
+
+        // Match by item name - case insensitive and trimmed
+        var pName = product.ItemName.Trim();
         
-        // Match by item name
         return sales
             .SelectMany(s => s.SaleItems.Select(si => new { Sale = s, SaleItem = si }))
-            .Where(x => x.SaleItem.Item.Name.Equals(product.ItemName, StringComparison.OrdinalIgnoreCase))
+            .Where(x => x.SaleItem.Item != null && x.SaleItem.Item.Name.Trim().Equals(pName, StringComparison.OrdinalIgnoreCase))
             .Select(x =>
             {
                 x.SaleItem.Sale = x.Sale;
@@ -339,5 +362,16 @@
             })
             .OrderByDescending(si => si.Sale.SaleDate)
             .ToList();
+    }
+
+    private int GetTotalSoldByItemName(string itemName)
+    {
+        if (string.IsNullOrEmpty(itemName)) return 0;
+        var trimmedName = itemName.Trim();
+        
+        return sales
+            .SelectMany(s => s.SaleItems)
+            .Where(si => si.Item != null && si.Item.Name.Trim().Equals(trimmedName, StringComparison.OrdinalIgnoreCase))
+            .Sum(si => si.Quantity);
     }
 }

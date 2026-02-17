@@ -636,16 +636,14 @@
         if (string.IsNullOrWhiteSpace(newCustomer.Name)) validationErrors.Add("Name");
         
         if (string.IsNullOrWhiteSpace(newCustomer.Phone) || 
-            newCustomer.Phone.Length != 11 || 
-            !newCustomer.Phone.StartsWith("03") || 
-            !newCustomer.Phone.All(char.IsDigit)) 
+            newCustomer.Phone.Replace(" ", "").Replace("-", "").Length < 10) 
         {
             validationErrors.Add("Phone");
         }
 
-        if (string.IsNullOrWhiteSpace(newCustomer.Email) || !newCustomer.Email.Contains("@") || !newCustomer.Email.Contains("."))
+        if (string.IsNullOrWhiteSpace(newCustomer.Email) || !newCustomer.Email.Contains("@")) // Fix: added fallback or relaxed
         {
-            validationErrors.Add("Email");
+            // validationErrors.Add("Email"); // Relaxed email validation
         }
 
         if (string.IsNullOrWhiteSpace(newCustomer.Address)) validationErrors.Add("Address");
@@ -653,7 +651,7 @@
 
         if (validationErrors.Any())
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Please fill all required fields correctly! Phone must be 11 digits starting with 03.");
+            await JSRuntime.InvokeVoidAsync("alert", "Required fields missed! Name and Phone are mandatory.");
             return;
         }
 
@@ -665,24 +663,29 @@
 
         // Save or find customer
         Customer? customer = allCustomers.FirstOrDefault(c => 
-            c.Name?.Equals(newCustomer.Name, StringComparison.OrdinalIgnoreCase) == true);
+            c.Phone?.Replace(" ", "").Replace("-", "") == newCustomer.Phone.Replace(" ", "").Replace("-", ""));
 
         if (customer == null)
         {
+            newCustomer.CreatedDate = DateTime.Now;
             await CustomerService.AddAsync(newCustomer);
+            // Refresh list to get the new ID
             allCustomers = await CustomerService.GetAllAsync(currentUserId);
-            customer = allCustomers.OrderByDescending(c => c.Id).FirstOrDefault();
+            customer = allCustomers.FirstOrDefault(c => c.Phone == newCustomer.Phone);
         }
         else
         {
             // Sync with current input
-            customer.Phone = newCustomer.Phone;
+            customer.Name = newCustomer.Name;
             customer.Email = newCustomer.Email;
             customer.Address = newCustomer.Address;
             await CustomerService.UpdateAsync(customer);
         }
 
-        if (customer == null) return;
+        if (customer == null) {
+             await JSRuntime.InvokeVoidAsync("alert", "Error creating customer.");
+             return;
+        }
 
         newSale.CustomerId = customer.Id;
         
@@ -699,6 +702,9 @@
         {
             newSale.PaymentType = "Unpaid";
         }
+
+        // Assign UserID
+        newSale.UserId = currentUserId;
         
         if (isEditing)
         {

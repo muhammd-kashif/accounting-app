@@ -1,320 +1,187 @@
-@page "/supplier-ledger"
+@page "/supplier-ledger/{supplierid:int}"
 @rendermode InteractiveServer
 @using AccountingApp.Services
 @using AccountingApp.Models
 @inject ISupplierService SupplierService
-@inject IPurchaseService PurchaseService
-@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
 
-<div class="p-4 md:p-8 bg-gray-100 min-h-screen">
-    <div class="mb-6 md:mb-8">
-        <h1 class="text-4xl font-bold text-gray-800">📒 Supplier Ledger</h1>
-        <p class="text-gray-600 mt-2">Complete record of all suppliers with their purchase history and outstanding balances</p>
-    </div>
+<div class="p-4 md:p-8 bg-gray-50 min-h-screen">
+    <button class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mb-4" type="button" @onclick="GoBack">
+        ← Back to Suppliers
+    </button>
 
-    <!-- Search Bar -->
-    <div class="mb-6">
-        <div class="relative max-w-md">
-            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-                🔍
-            </span>
-            <input type="text" @bind="searchTerm" @bind:event="oninput" 
-                   class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" 
-                   placeholder="Search suppliers...">
+    @if (isLoading)
+    {
+        <div class="flex items-center justify-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <p class="text-gray-500 ml-4">Loading supplier ledger...</p>
         </div>
-    </div>
+    }
+    else if (supplier == null)
+    {
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <p class="font-semibold">⚠️ Supplier not found!</p>
+        </div>
+    }
+    else
+    {
+        <!-- Supplier Info Card -->
+        <div class="bg-white shadow-lg rounded-lg p-6 mb-6">
+            <h2 class="text-3xl font-bold mb-2 text-gray-800">🏢 @supplier.SupplierName</h2>
+            <p class="text-gray-600 mb-4">📞 Phone: @supplier.Contact</p>
+            @if (!string.IsNullOrEmpty(supplier.Email))
+            {
+                <p class="text-gray-600 mb-4">📧 Email: @supplier.Email</p>
+            }
 
-    <!-- Date Filters -->
-    <div class="bg-white rounded-lg shadow p-4 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">📅 From Date</label>
-                <input type="date" @bind="fromDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+                <div class="bg-gray-100 rounded-lg p-4 text-center border-l-4 border-gray-500">
+                    <div class="text-gray-500 uppercase text-xs font-bold mb-1">Opening Balance</div>
+                    <div class="font-bold text-2xl text-gray-700">Rs. @supplier.OpeningBalance.ToString("N0")</div>
+                </div>
+                <div class="bg-red-50 rounded-lg p-4 text-center border-l-4 border-red-500">
+                    <div class="text-gray-500 uppercase text-xs font-bold mb-1">Total Billed</div>
+                    <div class="font-bold text-2xl text-red-600">Rs. @supplier.TotalBills.ToString("N0")</div>
+                </div>
+                <div class="bg-green-50 rounded-lg p-4 text-center border-l-4 border-green-500">
+                    <div class="text-gray-500 uppercase text-xs font-bold mb-1">Total Paid</div>
+                    <div class="font-bold text-2xl text-green-600">Rs. @supplier.TotalPaid.ToString("N0")</div>
+                </div>
+                <div class="bg-blue-50 rounded-lg p-4 text-center border-l-4 border-blue-500">
+                    <div class="text-gray-500 uppercase text-xs font-bold mb-1">Net Balance</div>
+                    <div class="font-bold text-2xl @(supplier.NetBalance > 0 ? "text-red-600" : supplier.NetBalance < 0 ? "text-green-600" : "text-gray-600")">
+                        Rs. @Math.Abs(supplier.NetBalance).ToString("N0")
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        @(supplier.NetBalance > 0 ? "(Payable)" : supplier.NetBalance < 0 ? "(Advance)" : "(Settled)")
+                    </div>
+                </div>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">📅 To Date</label>
-                <input type="date" @bind="toDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="bg-white shadow rounded-lg p-4 mb-6 flex flex-wrap items-end gap-4">
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                <input type="date" @bind="fromDate" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">📆 Select Year</label>
-                <select @bind="selectedYear" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                    <option value="0">All Years</option>
-                    @foreach (var year in GetAvailableYears())
-                    {
-                        <option value="@year">@year</option>
-                    }
-                </select>
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                <input type="date" @bind="toDate" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
             </div>
-            <div class="flex items-end">
-                <button @onclick="ClearFilters" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">
-                    🔄 Clear Filters
+            <div class="flex gap-2">
+                <button @onclick="ApplyFilter" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                    🔍 Filter
+                </button>
+                <button @onclick="ResetFilter" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-6 rounded-lg transition-colors">
+                    🔄 Reset
                 </button>
             </div>
         </div>
-        <div class="mt-3 text-sm text-gray-600">
-            <strong>Showing:</strong> @GetFilteredPurchases().Count() purchases from @GetFilteredSuppliers().Count() suppliers
+
+        <!-- Ledger Entries Table -->
+        <div class="bg-white shadow-lg rounded-lg p-6">
+            <h3 class="font-bold text-xl text-gray-700 mb-4">📒 Ledger Entries</h3>
+
+            @if (!ledgerEntries.Any())
+            {
+                <div class="text-center py-8 text-gray-500">
+                    <p class="text-lg">No ledger entries found for this supplier.</p>
+                    <p class="text-sm mt-2">Add bills or purchases to see transactions here.</p>
+                </div>
+            }
+            else
+            {
+                <div class="overflow-x-auto">
+                    <table class="min-w-full table-auto border border-gray-200">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-gray-700 uppercase text-xs font-bold border-b">Date</th>
+                                <th class="px-4 py-3 text-left text-gray-700 uppercase text-xs font-bold border-b">Description</th>
+                                <th class="px-4 py-3 text-right text-gray-700 uppercase text-xs font-bold border-b">Debit (Paid)</th>
+                                <th class="px-4 py-3 text-right text-gray-700 uppercase text-xs font-bold border-b">Credit (Billed)</th>
+                                <th class="px-4 py-3 text-right text-gray-700 uppercase text-xs font-bold border-b">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var entry in ledgerEntries)
+                            {
+                                <tr class="hover:bg-gray-50 border-b">
+                                    <td class="px-4 py-3 text-sm">@entry.Date.ToString("dd MMM yyyy")</td>
+                                    <td class="px-4 py-3 text-sm">@entry.Description</td>
+                                    <td class="px-4 py-3 text-right text-sm @(entry.Debit > 0 ? "text-green-600 font-semibold" : "text-gray-400")">
+                                        @(entry.Debit > 0 ? entry.Debit.ToString("N2") : "-")
+                                    </td>
+                                    <td class="px-4 py-3 text-right text-sm @(entry.Credit > 0 ? "text-red-600 font-semibold" : "text-gray-400")">
+                                        @(entry.Credit > 0 ? entry.Credit.ToString("N2") : "-")
+                                    </td>
+                                    <td class="px-4 py-3 text-right font-bold text-sm @(entry.Balance > 0 ? "text-red-600" : entry.Balance < 0 ? "text-green-600" : "text-gray-600")">
+                                        Rs. @Math.Abs(entry.Balance).ToString("N2")
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
         </div>
-    </div>
-
-    <!-- Suppliers Ledger Cards -->
-    <div class="space-y-6">
-        @if (!GetFilteredSuppliers().Any())
-        {
-            <div class="bg-white rounded-lg shadow p-8 text-center text-gray-400">
-                No suppliers found.
-            </div>
-        }
-        @foreach (var supplier in GetFilteredSuppliers())
-        {
-            var supplierPurchases = GetSupplierFilteredPurchases(supplier.Id);
-            var totalPurchases = supplierPurchases.Sum(p => p.TotalAmount);
-            var totalRemaining = supplier.OpeningBalance + totalPurchases;
-
-            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
-                <!-- Supplier Header -->
-                <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6">
-                    <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
-                        <div class="flex-1">
-                            <h2 class="text-2xl font-bold mb-2">@supplier.SupplierName</h2>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                                <div>📞 <strong>Phone:</strong> @supplier.Contact</div>
-                                <div>📧 <strong>Email:</strong> @supplier.Email</div>
-                                <div class="md:col-span-2">📍 <strong>Address:</strong> @supplier.Address</div>
-                            </div>
-                        </div>
-                        <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4 min-w-[200px]">
-                            <div class="text-sm opacity-90 mb-1">Total Outstanding</div>
-                            <div class="text-3xl font-bold">@totalRemaining.ToString("C")</div>
-                            <div class="text-xs opacity-75 mt-1">Opening: @supplier.OpeningBalance.ToString("C")</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Summary Stats -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 border-b">
-                    <div class="text-center">
-                        <div class="text-sm text-gray-500">Total Purchases</div>
-                        <div class="text-xl font-bold text-indigo-600">@supplierPurchases.Count()</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-sm text-gray-500">Purchase Amount</div>
-                        <div class="text-xl font-bold text-blue-600">@totalPurchases.ToString("C")</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-sm text-gray-500">Opening Balance</div>
-                        <div class="text-xl font-bold text-green-600">@supplier.OpeningBalance.ToString("C")</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-sm text-gray-500">Remaining Balance</div>
-                        <div class="text-xl font-bold text-orange-600">@totalRemaining.ToString("C")</div>
-                    </div>
-                </div>
-
-                <!-- Purchase History -->
-                <div class="p-4">
-                    @if (!supplierPurchases.Any())
-                    {
-                        <div class="text-center py-8 text-gray-400">
-                            <p>No purchase history for this supplier</p>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="mb-3 flex justify-between items-center">
-                            <h3 class="text-lg font-semibold text-gray-700">Purchase History</h3>
-                            <button @onclick="() => TogglePurchaseHistory(supplier.Id)" 
-                                    class="text-sm text-indigo-600 hover:text-indigo-800">
-                                @(expandedSuppliers.Contains(supplier.Id) ? "▼ Hide Details" : "▶ Show Details")
-                            </button>
-                        </div>
-
-                        @if (expandedSuppliers.Contains(supplier.Id))
-                        {
-                            <div class="overflow-x-auto">
-                                <table class="w-full min-w-[600px] text-sm">
-                                    <thead class="bg-gray-100">
-                                        <tr>
-                                            <th class="px-3 py-2 text-left font-semibold">Date</th>
-                                            <th class="px-3 py-2 text-left font-semibold">Items</th>
-                                            <th class="px-3 py-2 text-left font-semibold">Payment Method</th>
-                                            <th class="px-3 py-2 text-left font-semibold">Ref #</th>
-                                            <th class="px-3 py-2 text-right font-semibold">Amount</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var purchase in supplierPurchases)
-                                        {
-                                            <tr class="border-b hover:bg-gray-50">
-                                                <td class="px-3 py-2">@purchase.Date.ToString("dd MMM yyyy")</td>
-                                                <td class="px-3 py-2">
-                                                    <div class="max-w-xs">
-                                                        @string.Join(", ", purchase.Items.Select(i => $"{i.Product?.ItemName} x{i.Quantity}"))
-                                                    </div>
-                                                </td>
-                                                <td class="px-3 py-2">
-                                                    <span class="px-2 py-1 rounded text-xs font-medium @GetPaymentBadge(purchase.PaymentMethod)">
-                                                        @purchase.PaymentMethod
-                                                    </span>
-                                                </td>
-                                                <td class="px-3 py-2 text-gray-500">@purchase.ReferenceNo</td>
-                                                <td class="px-3 py-2 text-right font-semibold text-blue-600">@purchase.TotalAmount.ToString("C")</td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                    <tfoot class="bg-gray-50 font-bold">
-                                        <tr>
-                                            <td colspan="4" class="px-3 py-2 text-right">Total Purchases:</td>
-                                            <td class="px-3 py-2 text-right text-blue-600">@totalPurchases.ToString("C")</td>
-                                        </tr>
-                                        <tr class="border-t-2">
-                                            <td colspan="4" class="px-3 py-2 text-right">Opening Balance:</td>
-                                            <td class="px-3 py-2 text-right text-green-600">@supplier.OpeningBalance.ToString("C")</td>
-                                        </tr>
-                                        <tr class="text-lg">
-                                            <td colspan="4" class="px-3 py-3 text-right">Outstanding Balance:</td>
-                                            <td class="px-3 py-3 text-right text-orange-600">@totalRemaining.ToString("C")</td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="text-sm text-gray-600">
-                                <p>Latest purchase: @supplierPurchases.First().Date.ToString("dd MMM yyyy") - @supplierPurchases.First().TotalAmount.ToString("C")</p>
-                            </div>
-                        }
-                    }
-                </div>
-            </div>
-        }
-    </div>
+    }
 </div>
 
 @code {
-    private List<Supplier> suppliers = new();
-    private List<Purchase> purchases = new();
-    private string searchTerm = string.Empty;
-    private HashSet<int> expandedSuppliers = new();
-    private int currentUserId = 1;
-    
-    // Date filters
-    private DateTime? fromDate = null;
-    private DateTime? toDate = null;
-    private int selectedYear = 0;
+    [Parameter]
+    public int supplierid { get; set; }
+
+    private SupplierBalanceDto? supplier;
+    private List<LedgerEntry> ledgerEntries = new();
+    private bool isLoading = true;
+
+    private DateTime? fromDate = new DateTime(DateTime.Now.Year, 1, 1);
+    private DateTime? toDate = DateTime.Now;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
-        // Set default to current year
-        selectedYear = DateTime.Now.Year;
-        fromDate = new DateTime(selectedYear, 1, 1);
-        toDate = new DateTime(selectedYear, 12, 31);
+        await LoadLedger();
     }
 
-    private async Task LoadData()
+    protected override async Task OnParametersSetAsync()
     {
-        suppliers = await SupplierService.GetAllAsync(currentUserId);
-        purchases = await PurchaseService.GetAllAsync(currentUserId);
+        await LoadLedger();
     }
 
-    private void TogglePurchaseHistory(int supplierId)
+    private async Task LoadLedger()
     {
-        if (expandedSuppliers.Contains(supplierId))
+        isLoading = true;
+        try
         {
-            expandedSuppliers.Remove(supplierId);
+            supplier = await SupplierService.GetSupplierBalanceByIdAsync(supplierid);
+            ledgerEntries = await SupplierService.GetSupplierLedgerAsync(supplierid, fromDate, toDate);
         }
-        else
+        catch (Exception ex)
         {
-            expandedSuppliers.Add(supplierId);
+            Console.WriteLine($"Error loading supplier ledger: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 
-    private IEnumerable<Supplier> GetFilteredSuppliers()
+    private async Task ApplyFilter()
     {
-        var filtered = suppliers.AsEnumerable();
-        
-        if (!string.IsNullOrWhiteSpace(searchTerm))
-        {
-            filtered = filtered.Where(s =>
-                (s.SupplierName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (s.Contact?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (s.Email?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
-            );
-        }
-        
-        return filtered.OrderBy(s => s.SupplierName);
+        await LoadLedger();
     }
 
-    private List<Purchase> GetSupplierFilteredPurchases(int supplierId)
+    private async Task ResetFilter()
     {
-        var supplierPurchases = purchases.Where(p => p.SupplierId == supplierId);
-        
-        // Apply date filters
-        if (fromDate.HasValue)
-        {
-            supplierPurchases = supplierPurchases.Where(p => p.Date.Date >= fromDate.Value.Date);
-        }
-        
-        if (toDate.HasValue)
-        {
-            supplierPurchases = supplierPurchases.Where(p => p.Date.Date <= toDate.Value.Date);
-        }
-        
-        if (selectedYear > 0)
-        {
-            supplierPurchases = supplierPurchases.Where(p => p.Date.Year == selectedYear);
-        }
-        
-        return supplierPurchases.OrderByDescending(p => p.Date).ToList();
+        fromDate = new DateTime(DateTime.Now.Year, 1, 1);
+        toDate = DateTime.Now;
+        await LoadLedger();
     }
 
-    private IEnumerable<Purchase> GetFilteredPurchases()
+    private void GoBack()
     {
-        var filtered = purchases.AsEnumerable();
-        
-        if (fromDate.HasValue)
-        {
-            filtered = filtered.Where(p => p.Date.Date >= fromDate.Value.Date);
-        }
-        
-        if (toDate.HasValue)
-        {
-            filtered = filtered.Where(p => p.Date.Date <= toDate.Value.Date);
-        }
-        
-        if (selectedYear > 0)
-        {
-            filtered = filtered.Where(p => p.Date.Year == selectedYear);
-        }
-        
-        return filtered;
+        Navigation.NavigateTo("/suppliers");
     }
-
-    private IEnumerable<int> GetAvailableYears()
-    {
-        if (!purchases.Any())
-            return new[] { DateTime.Now.Year };
-            
-        var minYear = purchases.Min(p => p.Date.Year);
-        var maxYear = DateTime.Now.Year;
-        
-        return Enumerable.Range(minYear, maxYear - minYear + 1).OrderByDescending(y => y);
-    }
-
-    private void ClearFilters()
-    {
-        fromDate = null;
-        toDate = null;
-        selectedYear = 0;
-        searchTerm = string.Empty;
-    }
-
-    private string GetPaymentBadge(string method) => method switch
-    {
-        "Cash" => "bg-green-100 text-green-800",
-        "Bank" => "bg-blue-100 text-blue-800",
-        "Credit" => "bg-orange-100 text-orange-800",
-        _ => "bg-gray-100 text-gray-800"
-    };
 }
