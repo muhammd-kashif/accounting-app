@@ -66,6 +66,7 @@ namespace AccountingApp.Services
             existing.Category = expense.Category;
             existing.Amount = expense.Amount;
             existing.Description = expense.Description;
+            existing.ProductId = expense.ProductId;
 
             await _context.SaveChangesAsync();
         }

@@ -22,6 +22,7 @@ namespace AccountingApp.Models
         
         public int? BillPaymentId { get; set; }
         public int? PurchaseId { get; set; }
+        public int? ProductId { get; set; }
 
         public DateTime CreatedDate { get; set; } = DateTime.Now;
     }

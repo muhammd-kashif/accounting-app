@@ -112,9 +112,15 @@
     private string searchTerm = string.Empty;
     private int currentUserId = 1;
 
+    @inject IProductService ProductService
+
+    private List<Product> nonInventoryProducts = new();
+
     protected override async Task OnInitializedAsync()
     {
         await LoadExpenses();
+        var allProducts = await ProductService.GetAllAsync(currentUserId);
+        nonInventoryProducts = allProducts.Where(p => p.ItemType != "Inventory").ToList();
     }
 
     private async Task LoadExpenses()

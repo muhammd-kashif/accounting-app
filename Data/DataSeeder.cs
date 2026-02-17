@@ -45,40 +45,85 @@ namespace AccountingApp.Data
             // 3. Seed Suppliers
             var suppliers = new List<Supplier>
             {
-                new Supplier { SupplierName = "Ali", Contact = "03001234567", Address = "Lahore", UserId = 1 },
-                new Supplier { SupplierName = "Umair", Contact = "03001234567", Address = "Karachi", UserId = 1 },
-                new Supplier { SupplierName = "Amir", Contact = "03001234567", Address = "Islamabad", UserId = 1 },
-                new Supplier { SupplierName = "Hassan", Contact = "03001234567", Address = "Peshawar", UserId = 1 },
-                new Supplier { SupplierName = "Hussain", Contact = "03001234567", Address = "Multan", UserId = 1 },
-                new Supplier { SupplierName = "Kashif", Contact = "03001234567", Address = "Faisalabad", UserId = 1 },
-                new Supplier { SupplierName = "Sujjal", Contact = "03001234567", Address = "Rawalpindi", UserId = 1 },
-                new Supplier { SupplierName = "Hamza", Contact = "03210000000", Address = "Sialkot", UserId = 1 },
-                new Supplier { SupplierName = "Bilal", Contact = "03450000000", Address = "Gujranwala", UserId = 1 },
-                new Supplier { SupplierName = "Ahmed", Contact = "03330000000", Address = "Quetta", UserId = 1 }
+                new Supplier { SupplierName = "Ali", Contact = "03001234567", Address = "Lahore", UserId = 1, OpeningBalance = 5000 },
+                new Supplier { SupplierName = "Umair", Contact = "03001234567", Address = "Karachi", UserId = 1, OpeningBalance = 0 },
+                new Supplier { SupplierName = "Amir", Contact = "03001234567", Address = "Islamabad", UserId = 1, OpeningBalance = 2500 },
+                new Supplier { SupplierName = "Hassan", Contact = "03001234567", Address = "Peshawar", UserId = 1, OpeningBalance = 0 },
+                new Supplier { SupplierName = "Ahmed", Contact = "03330000000", Address = "Quetta", UserId = 1, OpeningBalance = 10000 }
             };
             await context.Suppliers.AddRangeAsync(suppliers);
+            await context.SaveChangesAsync();
 
-            // 4. Seed Products (Stationary Items)
-            // Prices from image are mapped to PurchasePrice. SalePrice set to same or + margin.
+            // 4. Seed Products (Stationary + Services)
             var products = new List<Product>
             {
+                // Inventory
                 new Product { ItemName = "Eraser", PurchasePrice = 15, SalePrice = 20, StockQuantity = 100, ItemType = "Inventory", UserId = 1 },
                 new Product { ItemName = "Ruler 30cm", PurchasePrice = 30, SalePrice = 40, StockQuantity = 100, ItemType = "Inventory", UserId = 1 },
-                new Product { ItemName = "Sharpener", PurchasePrice = 25, SalePrice = 35, StockQuantity = 100, ItemType = "Inventory", UserId = 1 },
-                new Product { ItemName = "Glue Stick", PurchasePrice = 40, SalePrice = 50, StockQuantity = 100, ItemType = "Inventory", UserId = 1 },
-                new Product { ItemName = "Highlighter Pink", PurchasePrice = 35, SalePrice = 45, StockQuantity = 100, ItemType = "Inventory", UserId = 1 },
-                new Product { ItemName = "Highlighter Yellow", PurchasePrice = 35, SalePrice = 45, StockQuantity = 100, ItemType = "Inventory", UserId = 1 },
-                new Product { ItemName = "Marker Set", PurchasePrice = 200, SalePrice = 250, StockQuantity = 100, ItemType = "Inventory", UserId = 1 },
                 new Product { ItemName = "Notebook A4", PurchasePrice = 150, SalePrice = 180, StockQuantity = 100, ItemType = "Inventory", UserId = 1 },
-                new Product { ItemName = "Notebook B5", PurchasePrice = 100, SalePrice = 130, StockQuantity = 100, ItemType = "Inventory", UserId = 1 },
-                new Product { ItemName = "Scissors", PurchasePrice = 120, SalePrice = 150, StockQuantity = 100, ItemType = "Inventory", UserId = 1 },
                 new Product { ItemName = "Stapler", PurchasePrice = 250, SalePrice = 300, StockQuantity = 100, ItemType = "Inventory", UserId = 1 },
-                new Product { ItemName = "Pencil HB", PurchasePrice = 10, SalePrice = 15, StockQuantity = 100, ItemType = "Inventory", UserId = 1 },
-                new Product { ItemName = "Pen Black", PurchasePrice = 20, SalePrice = 25, StockQuantity = 100, ItemType = "Inventory", UserId = 1 },
-                new Product { ItemName = "Pen Blue", PurchasePrice = 20, SalePrice = 25, StockQuantity = 100, ItemType = "Inventory", UserId = 1 },
-                new Product { ItemName = "Pen Red", PurchasePrice = 20, SalePrice = 25, StockQuantity = 100, ItemType = "Inventory", UserId = 1 }
+                
+                // Services
+                new Product { ItemName = "Printing Service", PurchasePrice = 2, SalePrice = 5, StockQuantity = 0, ItemType = "Service", UserId = 1, Description = "Color/BW Printing" },
+                new Product { ItemName = "Binding Service", PurchasePrice = 20, SalePrice = 50, StockQuantity = 0, ItemType = "Service", UserId = 1, Description = "Hard/Soft Binding" },
+                
+                // Non-Inventory
+                new Product { ItemName = "Office Chair", PurchasePrice = 4500, SalePrice = 0, StockQuantity = 0, ItemType = "Non-Inventory", UserId = 1, Description = "One-time office asset" },
+                new Product { ItemName = "Cleaning Supplies", PurchasePrice = 1200, SalePrice = 0, StockQuantity = 0, ItemType = "Non-Inventory", UserId = 1, Description = "Monthly cleaning stock" }
             };
             await context.Products.AddRangeAsync(products);
+            await context.SaveChangesAsync();
+
+            // 5. Seed Transactions for Supplier Ledger
+            var ali = suppliers.First(s => s.SupplierName == "Ali");
+            var notebook = products.First(p => p.ItemName == "Notebook A4");
+
+            var aliBill = new Bill
+            {
+                SupplierId = ali.Id,
+                BillNumber = "BILL-0001",
+                BillDate = DateTime.Now.AddDays(-5),
+                DueDate = DateTime.Now.AddDays(25),
+                Status = "Partial",
+                TotalAmount = 7500,
+                PaidAmount = 3000,
+                UserId = 1,
+                Items = new List<BillItem>
+                {
+                    new BillItem { ProductId = notebook.Id, Quantity = 50, Rate = 150, Amount = 7500 }
+                }
+            };
+            context.Bills.Add(aliBill);
+            await context.SaveChangesAsync();
+
+            var aliPayment = new BillPayment
+            {
+                BillId = aliBill.Id,
+                PaymentDate = DateTime.Now.AddDays(-2),
+                Amount = 3000,
+                PaymentMethod = "Cash",
+                ReferenceNo = "PAY-001",
+                UserId = 1
+            };
+            context.BillPayments.Add(aliPayment);
+
+            var umair = suppliers.First(s => s.SupplierName == "Umair");
+            var chair = products.First(p => p.ItemName == "Office Chair");
+
+            var umairPurchase = new Purchase
+            {
+                SupplierId = umair.Id,
+                Date = DateTime.Now.AddDays(-1),
+                PaymentMethod = "Credit",
+                ReferenceNo = "PUR-001",
+                TotalAmount = 9000,
+                UserId = 1,
+                Items = new List<PurchaseItem>
+                {
+                    new PurchaseItem { ProductId = chair.Id, Quantity = 2, Rate = 4500, Amount = 9000 }
+                }
+            };
+            context.Purchases.Add(umairPurchase);
 
             await context.SaveChangesAsync();
         }
