@@ -5,25 +5,18 @@
 namespace AccountingApp.Migrations
 {
     /// <inheritdoc />
-    public partial class SyncLocalChanges : Migration
+    public partial class Migration003 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<bool>(
-                name: "IsPaid",
-                table: "Incomes",
-                type: "bit",
-                nullable: false,
-                defaultValue: false);
+
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "IsPaid",
-                table: "Incomes");
+
         }
     }
 }

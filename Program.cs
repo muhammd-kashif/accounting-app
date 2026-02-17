@@ -2,6 +2,7 @@ using AccountingApp.Components;
 using AccountingApp.Data;
 using AccountingApp.Services;
 using Microsoft.EntityFrameworkCore;
+using ApexCharts;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,7 +31,7 @@ builder.Services.AddScoped<ISaleService, SaleService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 
 
-// builder.Services.AddApexCharts();
+builder.Services.AddApexCharts();
 
 var app = builder.Build();
 

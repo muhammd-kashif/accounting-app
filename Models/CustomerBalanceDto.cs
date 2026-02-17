@@ -14,5 +14,6 @@ namespace AccountingApp.Models
         public decimal CreditLimit { get; set; }
         public DateTime? LastActivityDate { get; set; }
         public int TotalOrders { get; set; }
+        public string? Email { get; set; }
     }
 }

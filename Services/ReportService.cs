@@ -13,6 +13,8 @@ namespace AccountingApp.Services
         Task<decimal> GetProfitLossAsync(int userId);
           // ADD THIS
         Task<decimal> GetTotalReceivablesAsync(int userId);
+        Task<List<RecentTransactionDto>> GetRecentTransactionsAsync(int userId, int count);
+        Task<List<ChartDataPoint>> GetDailyTotalsAsync(int userId, int days);
     
         
     }
@@ -60,5 +62,45 @@ namespace AccountingApp.Services
                 .SumAsync(s => s.RemainingAmount);
         }
 
+        public async Task<List<RecentTransactionDto>> GetRecentTransactionsAsync(int userId, int count)
+        {
+            var incomes = await _context.Incomes
+                .Include(i => i.Customer)
+                .Where(i => i.UserId == userId)
+                .OrderByDescending(i => i.Date)
+                .Take(count)
+                .Select(i => new RecentTransactionDto
+                {
+                    Id = i.Id,
+                    Date = i.Date ?? DateTime.MinValue,
+                    Description = i.Description ?? "No description",
+                    Amount = i.Amount,
+                    Type = "Income",
+                    Category = i.PaymentType ?? "General",
+                    EntityName = i.Customer != null ? i.Customer.Name : "General"
+                })
+                .ToListAsync();
+
+            var expenses = await _context.Expenses
+                .Where(e => e.UserId == userId)
+                .OrderByDescending(e => e.Date)
+                .Take(count)
+                .Select(e => new RecentTransactionDto
+                {
+                    Id = e.Id,
+                    Date = e.Date,
+                    Description = e.Description ?? "No description",
+                    Amount = e.Amount,
+                    Type = "Expense",
+                    Category = e.Category ?? "General",
+                    EntityName = "Vendor"
+                })
+                .ToListAsync();
+
+            return incomes.Concat(expenses)
+                .OrderByDescending(t => t.Date)
+                .Take(count)
+                .ToList();
+        }
     }
 }
