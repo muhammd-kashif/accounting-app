@@ -32,6 +32,7 @@ namespace AccountingApp.Services
             return await _context.Customers
                 .Where(c => c.UserId == userId)
                 .OrderByDescending(c => c.CreatedDate)
+                .AsNoTracking()   // 🔥 VERY IMPORTAN
                 .ToListAsync();
         }
 
@@ -248,7 +249,8 @@ namespace AccountingApp.Services
         NetBalance = (opening + totalSales) - totalReceived,
         CreditLimit = c.CreditLimit ?? 5000,
         TotalOrders = sales.Count,
-        LastActivityDate = lastActivity
+        LastActivityDate = lastActivity,
+        Email = c.Email ?? "",
     };
 }
 

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AccountingApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260216191419_SyncLocalChanges")]
-    partial class SyncLocalChanges
+    [Migration("20260217052717_Migration003")]
+    partial class Migration003
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -245,6 +245,9 @@ namespace AccountingApp.Migrations
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ProductId")
+                        .HasColumnType("int");
 
                     b.Property<int?>("PurchaseId")
                         .HasColumnType("int");

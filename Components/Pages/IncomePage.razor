@@ -1,12 +1,24 @@
-@page "/income"
+﻿@page "/income"
 @rendermode InteractiveServer
 @using AccountingApp.Services
 @using AccountingApp.Models
+@using ApexCharts
 @inject IIncomeService IncomeService
 @inject IInvoiceService InvoiceService
 @inject ICustomerService CustomerService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
+
+<style>
+    .animate-fade-in {
+        animation: fadeIn 0.6s ease-out forwards;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
 
 <div class="p-4 md:p-8 bg-gray-100 min-h-screen">
     <div class="mb-6 md:mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -18,26 +30,250 @@
 
     @* Summary Cards *@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-blue-500">
-            <p class="text-sm font-semibold text-gray-500 uppercase">Total Income</p>
-            <h3 class="text-3xl font-bold text-gray-800">Rs. @TotalIncome.ToString("N2")</h3>
-            <p class="text-xs text-gray-400 mt-2">Aggregated from filters</p>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-blue-500 transform transition-all hover:scale-105 animate-fade-in">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-semibold text-gray-500 uppercase">Total Income</p>
+                    <h3 class="text-3xl font-bold text-gray-800">Rs. @TotalIncome.ToString("N0")</h3>
+                </div>
+                @if (startDate.HasValue && endDate.HasValue)
+                {
+                    <span class="px-2 py-1 rounded text-xs font-bold @(GetGrowthStatus(TotalIncome, PreviousTotalIncome).ColorClass)">
+                        @(GetGrowthStatus(TotalIncome, PreviousTotalIncome).Icon) @Math.Abs(GetGrowthPercentage(TotalIncome, PreviousTotalIncome)).ToString("F0")%
+                    </span>
+                }
+            </div>
+            <p class="text-xs text-gray-400 mt-2">Aggregated from current filters</p>
         </div>
-        <div class="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-green-500">
-            <p class="text-sm font-semibold text-gray-500 uppercase">Cash Collection</p>
-            <h3 class="text-3xl font-bold text-green-600">Rs. @CashIncome.ToString("N2")</h3>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-green-500 transform transition-all hover:scale-105 animate-fade-in" style="animation-delay: 100ms">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-semibold text-gray-500 uppercase">Cash Collection</p>
+                    <h3 class="text-3xl font-bold text-green-600">Rs. @CashIncome.ToString("N0")</h3>
+                </div>
+                @if (startDate.HasValue && endDate.HasValue)
+                {
+                    <span class="px-2 py-1 rounded text-xs font-bold @(GetGrowthStatus(CashIncome, PreviousCashIncome).ColorClass)">
+                        @(GetGrowthStatus(CashIncome, PreviousCashIncome).Icon) @Math.Abs(GetGrowthPercentage(CashIncome, PreviousCashIncome)).ToString("F0")%
+                    </span>
+                }
+            </div>
             <p class="text-xs text-gray-400 mt-2">Physical cash in hand</p>
         </div>
-        <div class="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-purple-500">
-            <p class="text-sm font-semibold text-gray-500 uppercase">Bank Transfers</p>
-            <h3 class="text-3xl font-bold text-purple-600">Rs. @BankIncome.ToString("N2")</h3>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-purple-500 transform transition-all hover:scale-105 animate-fade-in" style="animation-delay: 200ms">
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-sm font-semibold text-gray-500 uppercase">Bank Transfers</p>
+                    <h3 class="text-3xl font-bold text-purple-600">Rs. @BankIncome.ToString("N0")</h3>
+                </div>
+                @if (startDate.HasValue && endDate.HasValue)
+                {
+                    <span class="px-2 py-1 rounded text-xs font-bold @(GetGrowthStatus(BankIncome, PreviousBankIncome).ColorClass)">
+                        @(GetGrowthStatus(BankIncome, PreviousBankIncome).Icon) @Math.Abs(GetGrowthPercentage(BankIncome, PreviousBankIncome)).ToString("F0")%
+                    </span>
+                }
+            </div>
             <p class="text-xs text-gray-400 mt-2">Digital payments received</p>
         </div>
     </div>
 
+    @* Charts Section *@
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Daily Income Trend Chart -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center gap-3">
+                    <h3 class="text-lg font-bold text-gray-700">📈 Income Trend</h3>
+                    @if (showComparison && (CurrentPeriodData.Any() && PreviousPeriodData.Any()))
+                    {
+                        <span class="px-3 py-1 rounded-full text-xs font-bold @(isPositiveGrowth ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")">
+                            @(isPositiveGrowth ? "↑" : "↓") @Math.Abs(growthPercentage).ToString("F1")%
+                        </span>
+                    }
+                </div>
+                <div class="flex bg-gray-100 rounded-lg p-1">
+                    <button @onclick='() => SetChartView("daily")' class="px-3 py-1 text-xs font-bold rounded-md transition-all @(chartView == "daily" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700")">Daily</button>
+                    <button @onclick='() => SetChartView("weekly")' class="px-3 py-1 text-xs font-bold rounded-md transition-all @(chartView == "weekly" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700")">Weekly</button>
+                    <button @onclick='() => SetChartView("monthly")' class="px-3 py-1 text-xs font-bold rounded-md transition-all @(chartView == "monthly" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700")">Monthly</button>
+                    <button @onclick='() => SetChartView("yearly")' class="px-3 py-1 text-xs font-bold rounded-md transition-all @(chartView == "yearly" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700")">Yearly</button>
+                </div>
+            </div>
+            
+            <!-- Chart Area with extra padding for rotated labels -->
+            <div class="h-[350px] md:h-[450px] pb-12 mb-4">
+                 @if (CurrentPeriodData.Any())
+                {
+                 <ApexChart @ref="incomeChart" @key="@($"{chartView}-{chartType}")" 
+                           TItem="ChartDataPoint"
+                           Title=""
+                           Options="commonOptions"
+                           OnDataPointSelection="OnChartClick">
+                    <ApexPointSeries TItem="ChartDataPoint"
+                                     Items="CurrentPeriodData"
+                                     Name="Current Period"
+                                     SeriesType="@GetSeriesType()"
+                                     XValue="@(e => e.Label)"
+                                     YAggregate="@(e => e.Sum(s => s.Amount))"
+                                     ShowDataLabels="@showDataLabels"
+                                     Color="#10B981" />
+
+                    <ApexPointSeries TItem="ChartDataPoint"
+                                     Items="@(showComparison ? PreviousPeriodData : new List<ChartDataPoint>())"
+                                     Name="Previous Period"
+                                     SeriesType="@GetSeriesType()"
+                                     XValue="@(e => e.Label)"
+                                     YAggregate="@(e => e.Sum(s => s.Amount))"
+                                     Color="#E5E7EB" />
+
+                    <ApexPointSeries TItem="ChartDataPoint"
+                                     Items="@(showTrendLine ? TrendLineData : new List<ChartDataPoint>())"
+                                     Name="Trend Line"
+                                     SeriesType="SeriesType.Line"
+                                     XValue="@(e => e.Label)"
+                                     YAggregate="@(e => e.Sum(s => s.Amount))"
+                                     Color="#F59E0B" />
+                </ApexChart>
+            }
+            else
+            {
+                <div class="h-80 flex items-center justify-center text-gray-400 italic">
+                    No data available for chart
+                </div>
+            }
+            </div>
+            
+            <!-- Chart Controls -->
+            <div class="flex flex-wrap justify-between items-center gap-6 mt-8 pt-6 border-t border-gray-100">
+                <!-- Chart Type Selector -->
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium text-gray-600">Chart Type:</span>
+                    <div class="flex bg-gray-100 rounded-lg p-1">
+                        <button @onclick='() => chartType = "bar"' 
+                                class="px-3 py-1 text-xs font-medium rounded transition-all @(chartType == "bar" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700")">
+                            📊 Bar
+                        </button>
+                        <button @onclick='() => chartType = "line"' 
+                                class="px-3 py-1 text-xs font-medium rounded transition-all @(chartType == "line" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700")">
+                            📈 Line
+                        </button>
+                        <button @onclick='() => chartType = "area"' 
+                                class="px-3 py-1 text-xs font-medium rounded transition-all @(chartType == "area" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700")">
+                            🌊 Area
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Data Labels Toggle -->
+                <label class="flex items-center gap-1 cursor-pointer">
+                    <input type="checkbox" @bind="showDataLabels" @bind:after="UpdateChartExplicit" class="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500" />
+                    <span class="text-sm font-normal text-gray-600">Show Values</span>
+                </label>
+
+                <!-- Trend Line Toggle -->
+                <label class="flex items-center gap-1 cursor-pointer">
+                    <input type="checkbox" @bind="showTrendLine" @bind:after="UpdateChartExplicit" class="w-4 h-4 text-orange-400 rounded focus:ring-2 focus:ring-orange-500" />
+                    <span class="text-sm font-medium text-gray-600">Show Trend</span>
+                </label>
+
+                <!-- Export Button -->
+                <!-- <button @onclick="ExportChartAsImage" class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200 rounded-lg text-xs font-bold transition-all ml-auto">
+                    📸 Export
+                </button> -->
+            </div>
+            
+            <!-- KPI Summary Panel -->
+            @if (CurrentPeriodData.Any())
+            {
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10 pt-8 border-t border-gray-100">
+                    <!-- Average Income -->
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-2xl">📊</span>
+                            <span class="text-xs font-medium text-blue-700">Average</span>
+                        </div>
+                        <div class="text-lg font-bold text-blue-900">Rs. @AverageIncome.ToString("N0")</div>
+                        <div class="text-xs text-blue-600">per @(chartView == "daily" ? "day" : chartView == "weekly" ? "week" : chartView == "monthly" ? "month" : "year")</div>
+                    </div>
+                    
+                    <!-- Growth Rate -->
+                    <div class="bg-gradient-to-br from-@(isPositiveGrowth ? "green" : "red")-50 to-@(isPositiveGrowth ? "green" : "red")-100 p-4 rounded-xl">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-2xl">@(isPositiveGrowth ? "📈" : "📉")</span>
+                            <span class="text-xs font-medium text-@(isPositiveGrowth ? "green" : "red")-700">Growth</span>
+                        </div>
+                        <div class="text-lg font-bold text-@(isPositiveGrowth ? "green" : "red")-900">
+                            @(isPositiveGrowth ? "↑" : "↓") @Math.Abs(growthPercentage).ToString("F1")%
+                        </div>
+                        <div class="text-xs text-@(isPositiveGrowth ? "green" : "red")-600">vs previous period</div>
+                    </div>
+                    
+                    <!-- Best Period -->
+                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-2xl">🏆</span>
+                            <span class="text-xs font-medium text-purple-700">Best Period</span>
+                        </div>
+                        <div class="text-lg font-bold text-purple-900 truncate">@BestPeriod</div>
+                        <div class="text-xs text-purple-600">Rs. @BestPeriodAmount.ToString("N0")</div>
+                    </div>
+                    
+                    <!-- Total Income -->
+                    <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-2xl">💰</span>
+                            <span class="text-xs font-medium text-orange-700">Total</span>
+                        </div>
+                        <div class="text-lg font-bold text-orange-900">Rs. @TotalPeriodIncome.ToString("N0")</div>
+                        <div class="text-xs text-orange-600">this @chartView</div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Payment Mode Distribution -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-700 mb-4">💳 Payment Mode Distribution</h3>
+             @if (PaymentModeData.Any())
+            {
+                <ApexChart TItem="PaymentModeStat"
+                           Title=""
+                           Options="pieOptions">
+
+                    <ApexPointSeries TItem="PaymentModeStat"
+                                     Items="PaymentModeData"
+                                     Name="Amount"
+                                     SeriesType="SeriesType.Donut"
+                                     XValue="@(e => e.Mode)"
+                                     YValue="@(e => e.Amount)"
+                                     OrderByDescending="e => e.Y"/>
+                </ApexChart>
+            }
+             else
+            {
+                <div class="h-64 flex items-center justify-center text-gray-400 italic">
+                    No data available for chart
+                </div>
+            }
+        </div>
+    </div>
+
     @* Advanced Filters *@
-    <div class="bg-white p-5 rounded-2xl shadow-sm mb-8 flex flex-wrap gap-4 items-end border border-gray-100">
-        <!-- <div class="flex gap-4 mb-4 flex-wrap"> -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm mb-8 border border-gray-100">
+        
+        <!-- Quick Date Filters -->
+         <div class="flex flex-wrap gap-2 mb-6 pb-4 border-b border-gray-100">
+            <span class="text-xs font-bold text-gray-400 uppercase self-center mr-2">Quick Filters:</span>
+            <button @onclick="() => SetDateRange(DateTime.Today, DateTime.Today)" class="px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-600 transition-colors">Today</button>
+            <button @onclick="() => SetDateRange(DateTime.Today.AddDays(-1), DateTime.Today.AddDays(-1))" class="px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-600 transition-colors">Yesterday</button>
+            <button @onclick="() => SetDateRange(DateTime.Today.AddDays(-7), DateTime.Today)" class="px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-600 transition-colors">Last 7 Days</button>
+            <button @onclick="() => SetDateRange(new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1), DateTime.Today)" class="px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-600 transition-colors">This Month</button>
+            <button @onclick="() => SetDateRange(DateTime.Today.AddMonths(-1), DateTime.Today)" class="px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-600 transition-colors">Last Month</button>
+        </div>
+
+        <div class="flex flex-wrap gap-4 items-end">
+            @* <div class="flex gap-4 mb-4 flex-wrap"> *@
     <!-- Search box -->
     <div class="flex-1 min-w-[250px]">
         <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Search Customer / Description</label>
@@ -68,16 +304,6 @@
         </select>
     </div>
 
-    <!-- Payment Status -->
-    <div>
-        <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Payment Status</label>
-        <select @bind="paymentStatusFilter" class="px-3 py-2 border rounded-lg">
-            <option value="">All</option>
-            <option value="paid">Paid</option>
-            <option value="due">Due</option>
-            <option value="overdue">Overdue</option>
-        </select>
-    </div>
 
     <!-- Sorting -->
     <div>
@@ -106,6 +332,7 @@
 
        
     </div>
+        </div>
 
     <!-- Add/Edit Modal -->
     @if (showForm)
@@ -117,18 +344,6 @@
                     <button @onclick="CancelForm" class="text-gray-500 hover:text-gray-700 text-xl">✖</button>
                 </div>
 
-                <div class="w-full md:w-56">
-                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Sort / Filter</label>
-                <select @bind="selectedSort" class="w-full px-3 py-2 border rounded-lg">
-                    <option value="newest">Newest First</option>
-                    <option value="oldest">Oldest First</option>
-                    <option value="due">Pending Dues</option>
-                    <option value="overdue">Overdue</option>
-                    <option value="paid">Paid Sales</option>
-                    <option value="highamount">Highest Amount</option>
-                    <option value="lowamount">Lowest Amount</option>
-                </select>
-            </div>
 
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -167,7 +382,7 @@
     }
 
     <!-- Income Table -->
-    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div id="income-table" class="bg-white rounded-lg shadow-md overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full min-w-[900px]">
             <thead class="bg-gray-200">
@@ -181,7 +396,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var income in FilteredIncomes)
+                @foreach (var income in PaginatedIncomes)
                 {
                     <tr class="border-b hover:bg-gray-50 transition-colors">
                         <td class="px-6 py-4">@income.Date?.ToString("dd MMM yyyy")</td>
@@ -239,13 +454,58 @@
             </tbody>
             </table>
         </div>
+        
+        <!-- Pagination Controls -->
+        @if (FilteredIncomes.Any())
+        {
+            <div class="flex flex-col md:flex-row justify-between items-center p-4 border-t border-gray-200 gap-4">
+                <div class="flex items-center gap-4">
+                    <span class="text-sm text-gray-600">
+                        Showing @((currentPage - 1) * pageSize + 1) - @Math.Min(currentPage * pageSize, FilteredIncomes.Count) of @FilteredIncomes.Count entries
+                    </span>
+                    <select @bind="pageSize" @bind:event="onchange" class="px-3 py-1 border rounded-lg text-sm">
+                        <option value="10">10 per page</option>
+                        <option value="25">25 per page</option>
+                        <option value="50">50 per page</option>
+                        <option value="100">100 per page</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <button @onclick="() => { if(currentPage > 1) currentPage = 1; }" 
+                            disabled="@(currentPage == 1)"
+                            class="px-3 py-1 rounded-lg text-sm font-medium transition-colors @(currentPage == 1 ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-gray-200 text-gray-700 hover:bg-gray-300")">
+                        First
+                    </button>
+                    <button @onclick="() => { if(currentPage > 1) currentPage--; }" 
+                            disabled="@(currentPage == 1)"
+                            class="px-3 py-1 rounded-lg text-sm font-medium transition-colors @(currentPage == 1 ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-gray-200 text-gray-700 hover:bg-gray-300")">
+                        Previous
+                    </button>
+                    
+                    <span class="px-4 py-1 bg-blue-600 text-white rounded-lg text-sm font-bold">
+                        @currentPage / @totalPages
+                    </span>
+                    
+                    <button @onclick="() => { if(currentPage < totalPages) currentPage++; }" 
+                            disabled="@(currentPage >= totalPages)"
+                            class="px-3 py-1 rounded-lg text-sm font-medium transition-colors @(currentPage >= totalPages ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-gray-200 text-gray-700 hover:bg-gray-300")">
+                        Next
+                    </button>
+                    <button @onclick="() => { if(currentPage < totalPages) currentPage = totalPages; }" 
+                            disabled="@(currentPage >= totalPages)"
+                            class="px-3 py-1 rounded-lg text-sm font-medium transition-colors @(currentPage >= totalPages ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-gray-200 text-gray-700 hover:bg-gray-300")">
+                        Last
+                    </button>
+                </div>
+            </div>
+        }
     </div>
 </div>
 
 @code {
     private string selectedSort = "newest";       // Sorting dropdown
     private string paymentFilter = "";            // Payment Type (Cash/Bank/Card/Cheque)
-    private string paymentStatusFilter = "";      // Payment Status (Paid/Due/Overdue)
     private string searchText = "";               // Search box
     private DateTime? startDate;
     private DateTime? endDate;
@@ -255,6 +515,11 @@
     private bool showForm = false;
     private bool isEditing = false;
     private int currentUserId = 1;
+    
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 25;
+    private int totalPages => (int)Math.Ceiling((double)FilteredIncomes.Count / pageSize);
 
 
 
@@ -273,16 +538,6 @@
             );
 
             // Payment Status Filter
-            query = paymentStatusFilter switch
-            {
-                "paid" => query.Where(s => s.Amount <= 0),
-                "due" => query.Where(s => s.Amount > 0),
-                "overdue" => query.Where(s =>
-                    s.Amount > 0 &&
-                    s.Date.HasValue &&
-                    DateTime.Now.Date > s.Date.Value.Date),
-                _ => query
-            };
 
             // Sorting
             query = selectedSort switch
@@ -297,15 +552,60 @@
         }
     }
 
+    private List<Income> PaginatedIncomes => FilteredIncomes
+        .Skip((currentPage - 1) * pageSize)
+        .Take(pageSize)
+        .ToList();
+
     private decimal TotalIncome => FilteredIncomes.Sum(i => i.Amount);
     private decimal CashIncome => FilteredIncomes.Where(i => i.PaymentType == "Cash").Sum(i => i.Amount);
     private decimal BankIncome => FilteredIncomes.Where(i => i.PaymentType == "Bank").Sum(i => i.Amount);
+
+    private decimal PreviousTotalIncome => PreviousFilteredIncomes.Sum(i => i.Amount);
+    private decimal PreviousCashIncome => PreviousFilteredIncomes.Where(i => i.PaymentType == "Cash").Sum(i => i.Amount);
+    private decimal PreviousBankIncome => PreviousFilteredIncomes.Where(i => i.PaymentType == "Bank").Sum(i => i.Amount);
+
+    private List<Income> PreviousFilteredIncomes
+    {
+        get
+        {
+            if (!startDate.HasValue || !endDate.HasValue) return new List<Income>();
+            
+            var duration = (endDate.Value.Date - startDate.Value.Date).Days + 1;
+            var prevStart = startDate.Value.Date.AddDays(-duration);
+            var prevEnd = startDate.Value.Date.AddDays(-1);
+            
+            return incomes.Where(i => 
+                (string.IsNullOrWhiteSpace(searchText) ||
+                (i.Customer?.Name?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (i.Description?.Contains(searchText, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+                (i.Date.HasValue && i.Date.Value.Date >= prevStart && i.Date.Value.Date <= prevEnd) &&
+                (string.IsNullOrWhiteSpace(paymentFilter) || i.PaymentType == paymentFilter)
+            ).ToList();
+        }
+    }
+
+    private decimal GetGrowthPercentage(decimal current, decimal previous)
+    {
+        if (previous == 0) return current > 0 ? 100 : 0;
+        return ((current - previous) / previous) * 100;
+    }
+
+    private (string Icon, string ColorClass) GetGrowthStatus(decimal current, decimal previous)
+    {
+        var growth = GetGrowthPercentage(current, previous);
+        if (growth > 0) return ("↑", "bg-green-100 text-green-700");
+        if (growth < 0) return ("↓", "bg-red-100 text-red-700");
+        return ("-", "bg-gray-100 text-gray-700");
+    }
 
 
 
     protected override async Task OnInitializedAsync()
     {
+        SetDialogOptions();
         await LoadData();
+        UpdateChartData();
     }
 
     private async Task LoadData()
@@ -321,6 +621,354 @@
         newIncome = new Income { UserId = currentUserId, Date = DateTime.Now };
         isEditing = false;
         showForm = true;
+    }
+
+
+    // Chart Data Models
+    public class ChartDataPoint { public string Label { get; set; } = string.Empty; public decimal Amount { get; set; } public int OrderIndex { get; set; } public DateTime? ReferenceDate { get; set; } }
+    public class PaymentModeStat { public string Mode { get; set; } = string.Empty; public decimal Amount { get; set; } }
+
+    private ApexChart<ChartDataPoint> incomeChart = null!;
+    private string chartView = "monthly"; // Default view
+    private bool showComparison = true;
+    private List<ChartDataPoint> CurrentPeriodData = new();
+    private List<ChartDataPoint> PreviousPeriodData = new();
+    private decimal growthPercentage = 0;
+    private bool isPositiveGrowth = true;
+    
+    // Chart Type Selection
+    private string chartType = "bar"; // bar, line, area
+    private bool showDataLabels = false;
+    private bool showTrendLine = false;
+    
+    // KPI Calculations
+    private decimal AverageIncome => CurrentPeriodData.Any() ? CurrentPeriodData.Average(x => x.Amount) : 0;
+    private decimal TotalPeriodIncome => CurrentPeriodData.Sum(x => x.Amount);
+    private string BestPeriod => CurrentPeriodData.Any() 
+        ? CurrentPeriodData.OrderByDescending(x => x.Amount).First().Label 
+        : "N/A";
+    private decimal BestPeriodAmount => CurrentPeriodData.Any() 
+        ? CurrentPeriodData.Max(x => x.Amount) 
+        : 0;
+
+    // Chart Options
+    private ApexCharts.ApexChartOptions<ChartDataPoint> commonOptions = new ApexCharts.ApexChartOptions<ChartDataPoint>();
+    private ApexCharts.ApexChartOptions<PaymentModeStat> pieOptions = new ApexCharts.ApexChartOptions<PaymentModeStat>();
+
+    private void SetChartView(string view)
+    {
+        chartView = view;
+        UpdateChartData();
+        CalculateGrowth();
+    }
+
+    private void UpdateChartData()
+    {
+        CurrentPeriodData.Clear();
+        PreviousPeriodData.Clear();
+        var allIncomes = incomes; // Use full dataset for trends
+
+        if (chartView == "daily")
+        {
+            // Last 30 Days
+            var endDate = DateTime.Today;
+            var startDate = endDate.AddDays(-29);
+            
+            CurrentPeriodData = Enumerable.Range(0, 30)
+                .Select(offset => startDate.AddDays(offset))
+                .Select(date => new ChartDataPoint 
+                { 
+                    Label = date.ToString("dd MMM"), 
+                    Amount = allIncomes.Where(i => i.Date.HasValue && i.Date.Value.Date == date).Sum(i => i.Amount),
+                    OrderIndex = date.DayOfYear,
+                    ReferenceDate = date
+                }).OrderBy(x => x.OrderIndex).ToList();
+
+            // Previous 30 Days (Comparison)
+            var prevStartDate = startDate.AddDays(-30);
+             PreviousPeriodData = Enumerable.Range(0, 30)
+                .Select(offset => prevStartDate.AddDays(offset))
+                .Select((date, index) => new ChartDataPoint 
+                { 
+                    Label = CurrentPeriodData[index].Label, // Match label for overlay
+                    Amount = allIncomes.Where(i => i.Date.HasValue && i.Date.Value.Date == date).Sum(i => i.Amount),
+                    OrderIndex = index
+                }).ToList();
+            showComparison = true;
+        }
+        else if (chartView == "weekly")
+        {
+            // Last 12 Weeks (Current Year vs Last Year)
+             var currentCulture = System.Globalization.CultureInfo.CurrentCulture;
+             var now = DateTime.Now;
+             
+             // Current Period
+             for (int i = 11; i >= 0; i--)
+             {
+                 var weekStart = now.AddDays(-7 * i);
+                 var weekNum = currentCulture.Calendar.GetWeekOfYear(weekStart, System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+                 var year = weekStart.Year;
+
+                 var amount = allIncomes.Where(x => x.Date.HasValue && 
+                    currentCulture.Calendar.GetWeekOfYear(x.Date.Value, System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday) == weekNum && 
+                    x.Date.Value.Year == year).Sum(x => x.Amount);
+                 
+                  CurrentPeriodData.Add(new ChartDataPoint { Label = $"W{weekNum}", Amount = amount, OrderIndex = i, ReferenceDate = weekStart });
+             }
+
+             // Previous Period (Same weeks, Last Year)
+             for (int i = 11; i >= 0; i--)
+             {
+                 var weekStart = now.AddDays(-7 * i); // Same rolling window
+                 var weekNum = currentCulture.Calendar.GetWeekOfYear(weekStart, System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+                 var year = weekStart.Year - 1; // Previous Year
+
+                 var amount = allIncomes.Where(x => x.Date.HasValue && 
+                    currentCulture.Calendar.GetWeekOfYear(x.Date.Value, System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday) == weekNum && 
+                    x.Date.Value.Year == year).Sum(x => x.Amount);
+                 
+                 PreviousPeriodData.Add(new ChartDataPoint { Label = $"W{weekNum}", Amount = amount, OrderIndex = i });
+             }
+             
+             showComparison = true; 
+        }
+        else if (chartView == "monthly")
+        {
+            // Current Year vs Last Year
+            var year = DateTime.Now.Year;
+            
+            CurrentPeriodData = Enumerable.Range(1, 12)
+                .Select(month => new ChartDataPoint 
+                { 
+                    Label = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(month), 
+                    Amount = allIncomes.Where(i => i.Date.HasValue && i.Date.Value.Year == year && i.Date.Value.Month == month).Sum(i => i.Amount),
+                    OrderIndex = month,
+                    ReferenceDate = new DateTime(year, month, 1)
+                }).ToList();
+
+             PreviousPeriodData = Enumerable.Range(1, 12)
+                .Select(month => new ChartDataPoint 
+                { 
+                    Label = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(month), 
+                    Amount = allIncomes.Where(i => i.Date.HasValue && i.Date.Value.Year == year - 1 && i.Date.Value.Month == month).Sum(i => i.Amount),
+                    OrderIndex = month
+                }).ToList();
+            
+            showComparison = true;
+        }
+        else if (chartView == "yearly")
+        {
+             // Last 5 Years
+             var currentYear = DateTime.Now.Year;
+             CurrentPeriodData = Enumerable.Range(0, 5)
+                .Select(offset => currentYear - 4 + offset)
+                .Select(year => new ChartDataPoint 
+                { 
+                    Label = year.ToString(), 
+                    Amount = allIncomes.Where(i => i.Date.HasValue && i.Date.Value.Year == year).Sum(i => i.Amount),
+                    OrderIndex = year,
+                    ReferenceDate = new DateTime(year, 1, 1, 0, 0, 0)
+                }).OrderBy(x => x.OrderIndex).ToList();
+             showComparison = false;
+        }
+        
+        CalculateGrowth();
+        StateHasChanged();
+    }
+
+    private void CalculateGrowth()
+    {
+        if (!showComparison || !CurrentPeriodData.Any() || !PreviousPeriodData.Any())
+        {
+            growthPercentage = 0;
+            return;
+        }
+
+        var currentTotal = CurrentPeriodData.Sum(x => x.Amount);
+        var previousTotal = PreviousPeriodData.Sum(x => x.Amount);
+
+        if (previousTotal == 0)
+        {
+            growthPercentage = currentTotal > 0 ? 100 : 0;
+        }
+        else
+        {
+            growthPercentage = ((currentTotal - previousTotal) / previousTotal) * 100;
+        }
+
+        isPositiveGrowth = growthPercentage >= 0;
+    }
+
+
+    private List<ChartDataPoint> TrendLineData
+    {
+        get
+        {
+            if (!CurrentPeriodData.Any()) return new List<ChartDataPoint>();
+            
+            var result = new List<ChartDataPoint>();
+            int windowSize = chartView == "daily" ? 7 : 3; // 7-day average for daily, 3-period for others
+            
+            for (int i = 0; i < CurrentPeriodData.Count; i++)
+            {
+                int start = Math.Max(0, i - windowSize + 1);
+                var window = CurrentPeriodData.Skip(start).Take(i - start + 1).ToList();
+                decimal avg = window.Average(x => x.Amount);
+                
+                result.Add(new ChartDataPoint 
+                { 
+                    Label = CurrentPeriodData[i].Label, 
+                    Amount = avg, 
+                    OrderIndex = CurrentPeriodData[i].OrderIndex 
+                });
+            }
+            return result;
+        }
+    }
+
+
+    private List<PaymentModeStat> PaymentModeData => FilteredIncomes
+        .GroupBy(i => i.PaymentType)
+        .Select(g => new PaymentModeStat { Mode = string.IsNullOrEmpty(g.Key) ? "Other" : g.Key, Amount = g.Sum(i => i.Amount) })
+        .ToList();
+
+
+    private SeriesType GetSeriesType()
+    {
+        return chartType switch
+        {
+            "line" => SeriesType.Line,
+            "area" => SeriesType.Area,
+            _ => SeriesType.Bar
+        };
+    }
+
+    private async Task OnChartClick(SelectedData<ChartDataPoint> selectedPoint)
+    {
+        if (selectedPoint.DataPoint == null || selectedPoint.DataPoint.Items == null || !selectedPoint.DataPoint.Items.Any()) return;
+        
+        var dp = selectedPoint.DataPoint.Items.First();
+        if (dp.ReferenceDate == null) return;
+        
+        var date = dp.ReferenceDate.Value;
+        
+        if (chartView == "daily")
+        {
+            startDate = date;
+            endDate = date;
+        }
+        else if (chartView == "weekly")
+        {
+            startDate = date;
+            endDate = date.AddDays(6);
+        }
+        else if (chartView == "monthly")
+        {
+            startDate = new DateTime(date.Year, date.Month, 1, 0, 0, 0);
+            endDate = startDate.Value.AddMonths(1).AddDays(-1);
+        }
+        else if (chartView == "yearly")
+        {
+            startDate = new DateTime(date.Year, 1, 1, 0, 0, 0);
+            endDate = new DateTime(date.Year, 12, 31, 23, 59, 59);
+        }
+        
+        currentPage = 1;
+        StateHasChanged();
+        
+        // Auto-scroll to table
+        await JSRuntime.InvokeVoidAsync("eval", "document.getElementById('income-table')?.scrollIntoView({behavior: 'smooth'})");
+    }
+
+    private async Task UpdateChartExplicit()
+    {
+        SetDialogOptions();
+        StateHasChanged();
+        if (incomeChart != null)
+        {
+            await incomeChart.UpdateOptionsAsync(true, true, false);
+            await incomeChart.UpdateSeriesAsync(true);
+        }
+    }
+
+    private void SetDialogOptions()
+    {
+        commonOptions.Chart = new Chart { Toolbar = new Toolbar { Show = false }, Zoom = new Zoom { Enabled = false } };
+        commonOptions.PlotOptions = new PlotOptions 
+        { 
+            Bar = new PlotOptionsBar 
+            { 
+                ColumnWidth = showComparison ? "45%" : "60%", 
+                BorderRadius = 4,
+                DataLabels = new PlotOptionsBarDataLabels
+                {
+                    Position = BarDataLabelPosition.Top,
+                    Orientation = Orientation.Vertical
+                }
+            } 
+        };
+        commonOptions.DataLabels = new DataLabels 
+        { 
+            Enabled = showDataLabels, 
+            OffsetY = -20,
+            Style = new DataLabelsStyle { FontSize = "10px", Colors = new List<string> { "#334155" } },
+            Background = new DataLabelsBackground { Enabled = false },
+            Formatter = @"function (value) { 
+                if (value === 0) return '';
+                if (value >= 1000) return (value/1000).toFixed(1) + 'k'; 
+                return value; 
+            }" 
+        };
+        commonOptions.Fill = new Fill { Opacity = 0.5 };
+        commonOptions.Stroke = new Stroke { Show = true, Width = 2, Colors = new List<string> { GetSeriesType() == SeriesType.Bar ? "transparent" : "#10B981" } };
+        commonOptions.Grid = new Grid { Show = true, BorderColor = "#f3f4f6" };
+        commonOptions.Xaxis = new XAxis 
+        { 
+            AxisBorder = new AxisBorder { Show = false }, 
+            AxisTicks = new AxisTicks { Show = false },
+            Labels = new XAxisLabels 
+            { 
+                Rotate = -45, 
+                RotateAlways = chartView == "daily",
+                HideOverlappingLabels = true,
+                Style = new AxisLabelStyle { FontSize = "11px", FontWeight = "500", Colors = new List<string> { "#64748b" } }
+            }
+        };
+        commonOptions.Yaxis = new List<YAxis> { new YAxis { Labels = new YAxisLabels { Formatter = @"function (value) { return 'Rs. ' + value.toLocaleString(); }" } } };
+        commonOptions.Legend = new Legend { Position = LegendPosition.Top, HorizontalAlign = Align.Right };
+        
+        // Enhanced Tooltips
+        commonOptions.Tooltip = new Tooltip
+        {
+            Enabled = true,
+            Y = new TooltipY
+            {
+                Formatter = @"function(value) { return 'Rs. ' + value.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }"
+            }
+        };
+        
+        pieOptions.Chart = new Chart { Toolbar = new Toolbar { Show = false } };
+        pieOptions.Legend = new Legend { Position = LegendPosition.Bottom };
+        pieOptions.Tooltip = new Tooltip
+        {
+            Enabled = true,
+            Y = new TooltipY
+            {
+                Formatter = @"function(value) { return 'Rs. ' + value.toLocaleString('en-PK', {minimumFractionDigits: 2}); }"
+            }
+        };
+    }
+
+     private void SetDateRange(DateTime start, DateTime end)
+    {
+        startDate = start;
+        endDate = end;
+    }
+
+
+    private async Task ExportChartAsImage()
+    {
+        await JSRuntime.InvokeVoidAsync("eval", "ApexCharts.exec('income-trend-chart', 'downloadSVG')");
     }
 
     private void EditIncome(Income income)
@@ -382,8 +1030,8 @@
         startDate = null;
         endDate = null;
         paymentFilter = "";
-        paymentStatusFilter = "";
         selectedSort = "newest";
+        currentPage = 1; // Reset to first page
     }
 
     private void ViewInvoice(int saleId)

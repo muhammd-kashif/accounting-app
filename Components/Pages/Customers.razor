@@ -662,25 +662,40 @@
         }
 
         // Save or find customer
-        Customer? customer = allCustomers.FirstOrDefault(c => 
-            c.Phone?.Replace(" ", "").Replace("-", "") == newCustomer.Phone.Replace(" ", "").Replace("-", ""));
+        Customer customer;
 
-        if (customer == null)
+        if (isEditing)
         {
-            newCustomer.CreatedDate = DateTime.Now;
-            await CustomerService.AddAsync(newCustomer);
-            // Refresh list to get the new ID
-            allCustomers = await CustomerService.GetAllAsync(currentUserId);
-            customer = allCustomers.FirstOrDefault(c => c.Phone == newCustomer.Phone);
+            customer = await CustomerService.GetByIdAsync(newCustomer.Id);
+
+            if (customer == null)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Customer not found!");
+                return;
+            }
+
+            customer.Name = newCustomer.Name;
+            customer.Phone = newCustomer.Phone;
+            customer.Email = newCustomer.Email;
+            customer.Address = newCustomer.Address;
+
+            await CustomerService.UpdateAsync(customer);
         }
         else
         {
-            // Sync with current input
-            customer.Name = newCustomer.Name;
-            customer.Email = newCustomer.Email;
-            customer.Address = newCustomer.Address;
-            await CustomerService.UpdateAsync(customer);
+            newCustomer.Id = 0;
+            newCustomer.UserId = currentUserId;
+            newCustomer.CreatedDate = DateTime.Now;
+
+            await CustomerService.AddAsync(newCustomer);
+
+            allCustomers = await CustomerService.GetAllAsync(currentUserId);
+
+            customer = allCustomers
+                .OrderByDescending(c => c.Id)
+                .FirstOrDefault();
         }
+
 
         if (customer == null) {
              await JSRuntime.InvokeVoidAsync("alert", "Error creating customer.");
