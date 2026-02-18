@@ -153,5 +153,7 @@ namespace AccountingApp.Migrations
             migrationBuilder.DropTable(
                 name: "Customers");
         }
+    
+        
     }
 }

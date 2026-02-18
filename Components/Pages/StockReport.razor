@@ -281,7 +281,7 @@
             
         totalSoldQty = sales
             .SelectMany(s => s.SaleItems)
-            .Where(si => si.Item != null && inventoryProducts.Any(prod => prod.ItemName == si.Item.Name))
+            .Where(si => inventoryProducts.Any(prod => prod.Id == si.ProductId))
             .Sum(i => i.Quantity);
     }
 
@@ -309,10 +309,10 @@
         var product = inventoryProducts.FirstOrDefault(p => p.Id == productId);
         if (product == null) return 0;
         
-        // Match by item name (since Items and Products are separate)
+        // Direct match by ProductId
         return sales
             .SelectMany(s => s.SaleItems)
-            .Where(si => si.Item != null && si.Item.Name.Equals(product.ItemName, StringComparison.OrdinalIgnoreCase))
+            .Where(si => si.ProductId == productId)
             .Sum(i => i.Quantity);
     }
 
@@ -349,12 +349,10 @@
         var product = inventoryProducts.FirstOrDefault(p => p.Id == productId);
         if (product == null) return new List<SaleItem>();
 
-        // Match by item name - case insensitive and trimmed
-        var pName = product.ItemName.Trim();
         
         return sales
             .SelectMany(s => s.SaleItems.Select(si => new { Sale = s, SaleItem = si }))
-            .Where(x => x.SaleItem.Item != null && x.SaleItem.Item.Name.Trim().Equals(pName, StringComparison.OrdinalIgnoreCase))
+            .Where(x => x.SaleItem.ProductId == productId)
             .Select(x =>
             {
                 x.SaleItem.Sale = x.Sale;
@@ -367,11 +365,14 @@
     private int GetTotalSoldByItemName(string itemName)
     {
         if (string.IsNullOrEmpty(itemName)) return 0;
-        var trimmedName = itemName.Trim();
+        
+        // Match by item name - case insensitive
+        var prod = inventoryProducts.FirstOrDefault(p => p.ItemName.Equals(itemName, StringComparison.OrdinalIgnoreCase));
+        if (prod == null) return 0;
         
         return sales
             .SelectMany(s => s.SaleItems)
-            .Where(si => si.Item != null && si.Item.Name.Trim().Equals(trimmedName, StringComparison.OrdinalIgnoreCase))
-            .Sum(si => si.Quantity);
+            .Where(si => si.ProductId == prod.Id)
+            .Sum(i => i.Quantity);
     }
 }

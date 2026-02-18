@@ -107,7 +107,8 @@ namespace AccountingApp.Services
                 Debit = 0,
                 Credit = 0, // It's the starting balance, not a transaction
                 Balance = supplier.OpeningBalance,
-                Reference = "OB"
+                Reference = "OB",
+                TransactionType = "Values"
             });
 
             foreach (var b in bills)
@@ -118,7 +119,8 @@ namespace AccountingApp.Services
                     Description = $"Bill #{b.BillNumber}",
                     Debit = 0,
                     Credit = b.TotalAmount,
-                    Reference = b.Id.ToString()
+                    Reference = b.Id.ToString(),
+                    TransactionType = "Bill"
                 });
             }
 
@@ -130,7 +132,8 @@ namespace AccountingApp.Services
                     Description = $"Purchase (Ref: {p.ReferenceNo})",
                     Debit = 0,
                     Credit = p.TotalAmount,
-                    Reference = p.Id.ToString()
+                    Reference = p.Id.ToString(),
+                    TransactionType = "Purchase"
                 });
 
                 // If non-credit, add a matching payment/debit
@@ -142,7 +145,8 @@ namespace AccountingApp.Services
                         Description = $"Paid ({p.PaymentMethod}) for Pur: {p.ReferenceNo}",
                         Debit = p.TotalAmount,
                         Credit = 0,
-                        Reference = p.Id.ToString()
+                        Reference = p.Id.ToString(),
+                        TransactionType = "Payment"
                     });
                 }
             }
@@ -155,7 +159,8 @@ namespace AccountingApp.Services
                     Description = $"Bill Payment Ref: {pay.ReferenceNo}",
                     Debit = pay.Amount,
                     Credit = 0,
-                    Reference = pay.Id.ToString()
+                    Reference = pay.Id.ToString(),
+                    TransactionType = "Payment"
                 });
             }
 
@@ -185,7 +190,8 @@ namespace AccountingApp.Services
                     Debit = 0,
                     Credit = 0,
                     Balance = bfBalance,
-                    Reference = "BF"
+                    Reference = "BF",
+                    TransactionType = "Values"
                 });
                 balance = bfBalance;
 

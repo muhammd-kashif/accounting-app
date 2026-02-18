@@ -10,5 +10,8 @@ namespace AccountingApp.Models
         public decimal Credit { get; set; } // Payment Amount
         public decimal Balance { get; set; } // Running Balance
         public string Reference { get; set; } = string.Empty; // Sale ID or check number
+        public string TransactionType { get; set; } = string.Empty; // Purchase, Bill, Payment etc.
     }
 }
+
+

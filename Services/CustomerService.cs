@@ -13,8 +13,7 @@ namespace AccountingApp.Services
         Task DeleteAsync(int id);
         Task<decimal> GetTotalOpeningBalance(int userId);
         Task<List<LedgerEntry>> GetCustomerLedgerAsync(int customerId, DateTime? fromDate, DateTime? toDate);
-        // Task<List<CustomerBalanceDto>> GetCustomerBalancesAsync();
-        Task<List<CustomerBalanceDto>> GetCustomerBalancesAsync();
+        Task<List<CustomerBalanceDto>> GetCustomerBalancesAsync(int userId);
         Task<CustomerBalanceDto?> GetCustomerBalanceByIdAsync(int customerId);
 
     }
@@ -172,9 +171,9 @@ namespace AccountingApp.Services
 
              return ledger;
         }
-        public async Task<List<CustomerBalanceDto>> GetCustomerBalancesAsync()
+        public async Task<List<CustomerBalanceDto>> GetCustomerBalancesAsync(int userId)
         {
-            var customers = await _context.Customers.ToListAsync();
+            var customers = await _context.Customers.Where(c => c.UserId == userId).ToListAsync();
             var summaries = new List<CustomerBalanceDto>();
 
             foreach (var c in customers)

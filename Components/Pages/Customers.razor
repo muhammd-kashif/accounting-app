@@ -4,7 +4,7 @@
 @using AccountingApp.Models
 @inject ICustomerService CustomerService
 @inject ISaleService SaleService
-@inject IItemService ItemService
+@inject IProductService ProductService
 @inject IInvoiceService InvoiceService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
@@ -106,7 +106,7 @@
                                     <option value="0">-- Select Item --</option>
                                     @foreach (var item in availableItems)
                                     {
-                                        <option value="@item.Id">@item.Name - Rs. @item.Price</option>
+                                        <option value="@item.Id">@item.ItemName - Rs. @item.SalePrice</option>
                                     }
                                 </select>
                             </div>
@@ -138,7 +138,7 @@
                                         @foreach (var item in selectedItems)
                                         {
                                             <tr class="border-b">
-                                                <td class="px-4 py-2">@item.Item.Name</td>
+                                                <td class="px-4 py-2">@item.Product.ItemName</td>
                                                 <td class="px-4 py-2 text-right">@item.Quantity</td>
                                                 <td class="px-4 py-2 text-right">Rs. @item.UnitPrice.ToString("N2")</td>
                                                 <td class="px-4 py-2 text-right font-semibold">Rs. @item.TotalPrice.ToString("N2")</td>
@@ -306,7 +306,7 @@
                                 <div class="text-xs">
                                     @foreach (var item in sale.SaleItems.Take(1))
                                     {
-                                        <div>@item.Item.Name (@item.Quantity)</div>
+                                        <div>@item.Product.ItemName (@item.Quantity)</div>
                                     }
                                     @if (sale.SaleItems.Count > 1)
                                     {
@@ -373,7 +373,7 @@
 
 @code {
     private List<Sale> sales = new();
-    private List<Item> availableItems = new();
+    private List<Product> availableItems = new();
     private List<Customer> allCustomers = new();
     private Customer newCustomer = new();
     private Sale newSale = new();
@@ -411,7 +411,7 @@
 
     private async Task LoadItems()
     {
-        availableItems = await ItemService.GetAllAsync();
+        availableItems = await ProductService.GetAllAsync(currentUserId);
     }
 
     // --- STEP 5: Filtering & Pagination Logic ---
@@ -512,8 +512,8 @@
 
         selectedItems = existing.SaleItems.Select(si => new SaleItem
         {
-            ItemId = si.ItemId,
-            Item = si.Item,
+            ProductId = si.ProductId,
+            Product = si.Product,
             Quantity = si.Quantity,
             UnitPrice = si.UnitPrice,
             TotalPrice = si.TotalPrice
@@ -598,7 +598,7 @@
             return;
         }
 
-        var existing = selectedItems.FirstOrDefault(si => si.ItemId == selectedItemId);
+        var existing = selectedItems.FirstOrDefault(si => si.ProductId == selectedItemId);
         if (existing != null)
         {
             if (item.StockQuantity < (existing.Quantity + selectedQuantity))
@@ -613,11 +613,11 @@
         {
             selectedItems.Add(new SaleItem
             {
-                ItemId = item.Id,
-                Item = item,
+                ProductId = item.Id,
+                Product = item,
                 Quantity = selectedQuantity,
-                UnitPrice = item.Price,
-                TotalPrice = selectedQuantity * item.Price
+                UnitPrice = item.SalePrice,
+                TotalPrice = selectedQuantity * item.SalePrice
             });
         }
 

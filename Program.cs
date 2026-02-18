@@ -20,6 +20,7 @@ builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<IIncomeService, IncomeService>();
 builder.Services.AddScoped<IExpenseService, ExpenseService>();
 builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<IFinancialReportService, FinancialReportService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IPurchaseService, PurchaseService>();
 builder.Services.AddScoped<IBillService, BillService>();
@@ -38,6 +39,31 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    
+    // Ensure missing columns exist in Expenses table
+    try
+    {
+        await db.Database.ExecuteSqlRawAsync(@"
+            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
+                           WHERE TABLE_NAME='Expenses' AND COLUMN_NAME='BillPaymentId')
+            BEGIN
+                ALTER TABLE Expenses ADD BillPaymentId int NULL
+            END
+        ");
+        
+        await db.Database.ExecuteSqlRawAsync(@"
+            IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS 
+                           WHERE TABLE_NAME='Expenses' AND COLUMN_NAME='PurchaseId')
+            BEGIN
+                ALTER TABLE Expenses ADD PurchaseId int NULL
+            END
+        ");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Note: Schema update attempt: {ex.Message}");
+    }
+    
     // db.Database.Migrate(); // Uncomment to auto-migrate on startup
     await DataSeeder.SeedAsync(scope.ServiceProvider);
 }

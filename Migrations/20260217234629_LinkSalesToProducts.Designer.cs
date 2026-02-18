@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AccountingApp.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260216092006_Migration002")]
-    partial class Migration002
+    [Migration("20260217234629_LinkSalesToProducts")]
+    partial class LinkSalesToProducts
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -192,7 +192,6 @@ namespace AccountingApp.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<decimal?>("CreditLimit")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Email")
@@ -246,6 +245,9 @@ namespace AccountingApp.Migrations
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ProductId")
+                        .HasColumnType("int");
 
                     b.Property<int?>("PurchaseId")
                         .HasColumnType("int");
@@ -705,7 +707,7 @@ namespace AccountingApp.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("ItemId")
+                    b.Property<int>("ProductId")
                         .HasColumnType("int");
 
                     b.Property<int>("Quantity")
@@ -722,7 +724,7 @@ namespace AccountingApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ItemId");
+                    b.HasIndex("ProductId");
 
                     b.HasIndex("SaleId");
 
@@ -946,9 +948,9 @@ namespace AccountingApp.Migrations
 
             modelBuilder.Entity("AccountingApp.Models.SaleItem", b =>
                 {
-                    b.HasOne("AccountingApp.Models.Item", "Item")
+                    b.HasOne("AccountingApp.Models.Product", "Product")
                         .WithMany()
-                        .HasForeignKey("ItemId")
+                        .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -958,7 +960,7 @@ namespace AccountingApp.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Item");
+                    b.Navigation("Product");
 
                     b.Navigation("Sale");
                 });

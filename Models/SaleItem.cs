@@ -14,10 +14,10 @@ namespace AccountingApp.Models
         public virtual Sale Sale { get; set; } = null!;
 
         [Required]
-        public int ItemId { get; set; }
+        public int ProductId { get; set; }
 
-        [ForeignKey("ItemId")]
-        public virtual Item Item { get; set; } = null!;
+        [ForeignKey("ProductId")]
+        public virtual Product Product { get; set; } = null!;
 
         [Required]
         [Range(1, int.MaxValue, ErrorMessage = "Quantity must be at least 1")]

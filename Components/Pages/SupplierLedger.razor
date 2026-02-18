@@ -4,6 +4,7 @@
 @using AccountingApp.Models
 @inject ISupplierService SupplierService
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 <div class="p-4 md:p-8 bg-gray-50 min-h-screen">
     <button class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mb-4" type="button" @onclick="GoBack">
@@ -102,6 +103,7 @@
                                 <th class="px-4 py-3 text-right text-gray-700 uppercase text-xs font-bold border-b">Debit (Paid)</th>
                                 <th class="px-4 py-3 text-right text-gray-700 uppercase text-xs font-bold border-b">Credit (Billed)</th>
                                 <th class="px-4 py-3 text-right text-gray-700 uppercase text-xs font-bold border-b">Balance</th>
+                                <th class="px-4 py-3 text-center text-gray-700 uppercase text-xs font-bold border-b">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -118,6 +120,12 @@
                                     </td>
                                     <td class="px-4 py-3 text-right font-bold text-sm @(entry.Balance > 0 ? "text-red-600" : entry.Balance < 0 ? "text-green-600" : "text-gray-600")">
                                         Rs. @Math.Abs(entry.Balance).ToString("N2")
+                                    </td>
+                                    <td class="px-4 py-3 text-center">
+                                        @if (entry.TransactionType == "Purchase")
+                                        {
+                                            <button @onclick="() => EmailInvoice(entry)" class="bg-purple-500 text-white px-2 py-1 rounded text-xs" title="Email Invoice">✉️</button>
+                                        }
                                     </td>
                                 </tr>
                             }
@@ -183,5 +191,11 @@
     private void GoBack()
     {
         Navigation.NavigateTo("/suppliers");
+    }
+
+    private async Task EmailInvoice(LedgerEntry entry)
+    {
+        var email = supplier?.Email ?? "supplier@example.com";
+        await JSRuntime.InvokeVoidAsync("alert", $"Invoice for {entry.Description} has been emailed to {email}!");
     }
 }

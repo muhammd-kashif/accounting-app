@@ -33,7 +33,7 @@ namespace AccountingApp.Services
             var sale = await _context.Sales
                 .Include(s => s.Customer)
                 .Include(s => s.SaleItems)
-                    .ThenInclude(si => si.Item)
+                    .ThenInclude(si => si.Product)
                 .FirstOrDefaultAsync(s => s.Id == saleId);
 
             if (sale == null) return null;
@@ -56,7 +56,7 @@ namespace AccountingApp.Services
                     .ThenInclude(s => s.Customer)
                 .Include(i => i.Sale)
                     .ThenInclude(s => s.SaleItems)
-                        .ThenInclude(si => si.Item)
+                        .ThenInclude(si => si.Product)
                 .FirstOrDefaultAsync(i => i.Id == invoice.Id);
         }
 
@@ -67,7 +67,7 @@ namespace AccountingApp.Services
                     .ThenInclude(s => s.Customer)
                 .Include(i => i.Sale)
                     .ThenInclude(s => s.SaleItems)
-                        .ThenInclude(si => si.Item)
+                        .ThenInclude(si => si.Product)
                 .FirstOrDefaultAsync(i => i.SaleId == saleId);
         }
 
@@ -78,7 +78,7 @@ namespace AccountingApp.Services
                     .ThenInclude(s => s.Customer)
                 .Include(i => i.Sale)
                     .ThenInclude(s => s.SaleItems)
-                        .ThenInclude(si => si.Item)
+                        .ThenInclude(si => si.Product)
                 .FirstOrDefaultAsync(i => i.InvoiceNumber == invoiceNumber);
         }
 

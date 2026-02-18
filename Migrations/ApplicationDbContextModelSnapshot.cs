@@ -704,7 +704,7 @@ namespace AccountingApp.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("ItemId")
+                    b.Property<int>("ProductId")
                         .HasColumnType("int");
 
                     b.Property<int>("Quantity")
@@ -721,7 +721,7 @@ namespace AccountingApp.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ItemId");
+                    b.HasIndex("ProductId");
 
                     b.HasIndex("SaleId");
 
@@ -945,9 +945,9 @@ namespace AccountingApp.Migrations
 
             modelBuilder.Entity("AccountingApp.Models.SaleItem", b =>
                 {
-                    b.HasOne("AccountingApp.Models.Item", "Item")
+                    b.HasOne("AccountingApp.Models.Product", "Product")
                         .WithMany()
-                        .HasForeignKey("ItemId")
+                        .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -957,7 +957,7 @@ namespace AccountingApp.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Item");
+                    b.Navigation("Product");
 
                     b.Navigation("Sale");
                 });

@@ -196,9 +196,9 @@ namespace AccountingApp.Data
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<SaleItem>()
-                .HasOne(si => si.Item)
+                .HasOne(si => si.Product)
                 .WithMany()
-                .HasForeignKey(si => si.ItemId)
+                .HasForeignKey(si => si.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Invoice>()

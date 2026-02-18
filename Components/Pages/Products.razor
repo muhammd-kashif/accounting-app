@@ -3,6 +3,7 @@
 @using AccountingApp.Services
 @using AccountingApp.Models
 @inject IProductService ProductService
+@inject IExpenseService ExpenseService
 @inject IJSRuntime JSRuntime
 
 <div class="p-4 md:p-8 bg-gray-100 min-h-screen">
@@ -294,7 +295,7 @@
     private int formStock = 0;
     private int formReorder = 10;
 
-    @inject IExpenseService ExpenseService
+    private List<Expense> allExpenses = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -332,13 +333,12 @@
         showForm = true;
     }
 
+
     private void OpenAddNonInventoryForm()
     {
         OpenAddForm();
         formType = "Non-Inventory"; // Default to Non-Inventory
     }
-
-    private List<Expense> allExpenses = new();
 
     private decimal GetProductExpense(int productId)
     {

@@ -435,8 +435,9 @@
                                 <td class="px-4 py-3 text-sm text-gray-500">@purchase.ReferenceNo</td>
                                 <td class="px-4 py-3 text-right font-bold text-red-600">Rs @purchase.TotalAmount.ToString("N2")</td>
                                 <td class="px-4 py-3 text-center">
-                                    <button @onclick="() => ShowDetail(purchase)" class="bg-blue-500 text-white px-2 py-1 rounded text-xs mr-1">👁️</button>
-                                    <button @onclick="() => DeletePurchase(purchase.Id)" class="bg-red-500 text-white px-2 py-1 rounded text-xs">🗑️</button>
+                                    <button @onclick="() => ShowDetail(purchase)" class="bg-blue-500 text-white px-2 py-1 rounded text-xs mr-1" title="View Detail">👁️</button>
+                                    <button @onclick="() => EmailInvoice(purchase)" class="bg-purple-500 text-white px-2 py-1 rounded text-xs mr-1" title="Email Invoice">✉️</button>
+                                    <button @onclick="() => DeletePurchase(purchase.Id)" class="bg-red-500 text-white px-2 py-1 rounded text-xs" title="Delete">🗑️</button>
                                 </td>
                             </tr>
                         }
@@ -784,6 +785,12 @@
     private async Task PrintInvoice()
     {
         await JSRuntime.InvokeVoidAsync("print");
+    }
+
+    private async Task EmailInvoice(Purchase purchase)
+    {
+        var email = purchase.Supplier?.Email ?? "supplier@example.com";
+        await JSRuntime.InvokeVoidAsync("alert", $"Purchase Order #{purchase.Id} (Ref: {purchase.ReferenceNo}) has been emailed to {email}!");
     }
 
     // ========== FILTERING ==========

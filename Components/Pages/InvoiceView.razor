@@ -129,10 +129,10 @@ else
                                     <tr class="border-b hover:bg-gray-50">
                                         <td class="px-4 py-3">@srNo</td>
                                         <td class="px-4 py-3">
-                                            <div class="font-semibold">@item.Item.Name</div>
-                                            @if (!string.IsNullOrWhiteSpace(item.Item.Description))
+                                            <div class="font-semibold">@item.Product.ItemName</div>
+                                            @if (!string.IsNullOrWhiteSpace(item.Product.Description))
                                             {
-                                                <div class="text-sm text-gray-500">@item.Item.Description</div>
+                                                <div class="text-sm text-gray-500">@item.Product.Description</div>
                                             }
                                         </td>
                                         <td class="px-4 py-3 text-right">@item.Quantity</td>
@@ -330,7 +330,7 @@ else
             customerAddress = invoice.Sale.Customer.Address ?? "",
             items = invoice.Sale.SaleItems.Select(i => new
             {
-                name = i.Item.Name,
+                name = i.Product.ItemName,
                 qty = i.Quantity,
                 price = i.UnitPrice.ToString("N2"),
                 total = i.TotalPrice.ToString("N2")

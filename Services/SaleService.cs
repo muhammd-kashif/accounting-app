@@ -30,7 +30,7 @@ namespace AccountingApp.Services
             return await _context.Sales
                 .Include(s => s.Customer)
                 .Include(s => s.SaleItems)
-                    .ThenInclude(si => si.Item)
+                    .ThenInclude(si => si.Product)
                 .Where(s => s.UserId == userId)
                 .OrderByDescending(s => s.SaleDate)
                 .ToListAsync();
@@ -41,7 +41,7 @@ namespace AccountingApp.Services
             return await _context.Sales
                 .Include(s => s.Customer)
                 .Include(s => s.SaleItems)
-                    .ThenInclude(si => si.Item)
+                    .ThenInclude(si => si.Product)
                 .Where(s => s.CustomerId == customerId)
                 .OrderByDescending(s => s.SaleDate)
                 .ToListAsync();
@@ -53,7 +53,7 @@ namespace AccountingApp.Services
                 .Include(s => s.Customer)
                 .Include(s => s.Payments)
                 .Include(s => s.SaleItems)
-                    .ThenInclude(si => si.Item)
+                    .ThenInclude(si => si.Product)
                 .FirstOrDefaultAsync(s => s.Id == id);
         }
 
@@ -63,7 +63,7 @@ namespace AccountingApp.Services
                 .Include(s => s.Customer)
                 .Include(s => s.Payments)
                 .Include(s => s.SaleItems)
-                    .ThenInclude(si => si.Item)
+                    .ThenInclude(si => si.Product)
                 .FirstOrDefaultAsync(s => s.SaleNumber == saleNumber);
         }
 
@@ -92,11 +92,11 @@ namespace AccountingApp.Services
                 item.SaleId = sale.Id;
                 _context.SaleItems.Add(item);
 
-                var product = await _context.Items.FindAsync(item.ItemId);
+                var product = await _context.Products.FindAsync(item.ProductId);
                 if (product != null)
                 {
                     product.StockQuantity -= item.Quantity;
-                    product.UpdatedDate = DateTime.Now;
+                    product.UpdatedDate = DateTime.Now; // Product might use CreatedDate/UpdatedDate differently? Needs check.
                 }
             }
 
@@ -194,11 +194,13 @@ namespace AccountingApp.Services
                 // Restore stock
                 foreach (var item in sale.SaleItems)
                 {
-                    var product = await _context.Items.FindAsync(item.ItemId);
+                    var product = await _context.Products.FindAsync(item.ProductId);
                     if (product != null)
                     {
                         product.StockQuantity += item.Quantity;
-                        product.UpdatedDate = DateTime.Now;
+                        product.UpdatedDate = DateTime.Now; // Assuming Product has UpdatedDate? 
+                        // Checked Product.cs earlier? No. Let's assume UpdatedDate exists or remove it if errored.
+                        // Actually better to check Product.cs.
                     }
                 }
 

@@ -126,6 +126,88 @@ namespace AccountingApp.Data
             context.Purchases.Add(umairPurchase);
 
             await context.SaveChangesAsync();
+
+            // 6. Seed Customers (if needed) & Sales
+            if (!context.Customers.Any())
+            {
+                context.Customers.Add(new Customer { Name = "Walk-in Customer", Phone = "03000000000", Address = "Local", UserId = 1, OpeningBalance = 0 });
+                await context.SaveChangesAsync();
+            }
+
+            var walkInCustomer = context.Customers.First();
+            var notebookA4 = products.First(p => p.ItemName == "Notebook A4");
+            var stapler = products.First(p => p.ItemName == "Stapler");
+
+            // Seed Sales
+            if (!context.Sales.Any())
+            {
+                var sale1 = new Sale
+                {
+                    SaleNumber = "SALE-1001",
+                    CustomerId = walkInCustomer.Id,
+                    SaleDate = DateTime.Now.AddDays(-3),
+                    PaymentType = "Cash",
+                    TotalAmount = 1800, // 10 notebooks
+                    PaidAmount = 1800,
+                    RemainingAmount = 0,
+                    UserId = 1,
+                    SaleItems = new List<SaleItem>
+                    {
+                        new SaleItem { ProductId = notebookA4.Id, Quantity = 10, UnitPrice = 180, TotalPrice = 1800 }
+                    },
+                    Payments = new List<SalePayment>
+                    {
+                        new SalePayment { PaymentDate = DateTime.Now.AddDays(-3), Amount = 1800, PaymentMethod = "Cash", UserId = 1 }
+                    }
+                };
+                context.Sales.Add(sale1);
+
+                var sale2 = new Sale
+                {
+                    SaleNumber = "SALE-1002",
+                    CustomerId = walkInCustomer.Id,
+                    SaleDate = DateTime.Now.AddDays(-1),
+                    PaymentType = "Credit",
+                    TotalAmount = 600, // 2 staplers
+                    PaidAmount = 0,
+                    RemainingAmount = 600,
+                    PaymentDueDate = DateTime.Now.AddDays(7),
+                    UserId = 1,
+                    SaleItems = new List<SaleItem>
+                    {
+                        new SaleItem { ProductId = stapler.Id, Quantity = 2, UnitPrice = 300, TotalPrice = 600 }
+                    }
+                };
+                context.Sales.Add(sale2);
+                
+                await context.SaveChangesAsync();
+            }
+
+            // 7. Seed Expenses
+            if (!context.Expenses.Any())
+            {
+                var expenses = new List<Expense>
+                {
+                    new Expense { Date = DateTime.Now.AddDays(-10), Category = "Rent", Amount = 50000, Description = "Shop Rent - Feb", UserId = 1 },
+                    new Expense { Date = DateTime.Now.AddDays(-5), Category = "Utilities", Amount = 15000, Description = "Electricity Bill", UserId = 1 },
+                    new Expense { Date = DateTime.Now.AddDays(-2), Category = "Salary", Amount = 30000, Description = "Staff Salary", UserId = 1 },
+                    new Expense { Date = DateTime.Now.AddDays(-1), Category = "Maintenance", Amount = 2500, Description = "AC Repair", UserId = 1 }
+                };
+                context.Expenses.AddRange(expenses);
+                await context.SaveChangesAsync();
+            }
+
+            // 8. Seed Incomes
+            if (!context.Incomes.Any())
+            {
+                var incomes = new List<Income>
+                {
+                    new Income { Date = DateTime.Now.AddDays(-4), Amount = 5000, PaymentType = "Cash", Description = "Consulting Fee", UserId = 1, IsPaid = true },
+                    new Income { Date = DateTime.Now.AddDays(-2), Amount = 12000, PaymentType = "Bank", Description = "Services Revenue", UserId = 1, IsPaid = true }
+                };
+                context.Incomes.AddRange(incomes);
+                await context.SaveChangesAsync();
+            }
         }
     }
 }

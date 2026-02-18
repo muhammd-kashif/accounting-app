@@ -183,6 +183,7 @@
     private List<CustomerBalanceDto> customers = new();
     private string activeFilter = "All"; // All, Receivable, Payable, Zero
     private bool isLoading = true;
+    private int currentUserId = 1; // Mock user ID
 
     private decimal TotalReceivable => customers.Where(c => c.NetBalance > 0).Sum(c => c.NetBalance);
     private decimal TotalPayable => customers.Where(c => c.NetBalance < 0).Sum(c => c.NetBalance);
@@ -206,7 +207,7 @@
     private async Task LoadData()
     {
         isLoading = true;
-        customers = await CustomerService.GetCustomerBalancesAsync();
+        customers = await CustomerService.GetCustomerBalancesAsync(currentUserId);
         
         // Default sort: Highest Receivable first (Focus on Debt Recovery)
         customers = customers.OrderByDescending(c => c.NetBalance).ToList();
