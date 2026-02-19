@@ -65,9 +65,54 @@
         </div>
     </div>
 
-    <!-- Expense Table -->
+    <!-- Expense List -->
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="overflow-x-auto">
+        
+        <!-- Mobile Card View -->
+        <div class="block md:hidden pb-4">
+             @if (!GetFilteredExpenses().Any())
+            {
+                <div class="p-8 text-center text-gray-500">No matching expenses found.</div>
+            }
+            else
+            {
+                <div class="space-y-4 px-4 pt-4">
+                    @foreach (var expense in GetFilteredExpenses())
+                    {
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <div class="font-bold text-gray-800 text-lg">@expense.Category</div>
+                                    <div class="text-sm text-gray-500">@expense.Date.ToString("dd MMM yyyy")</div>
+                                </div>
+                                <span class="text-lg font-bold text-red-600">
+                                    @expense.Amount.ToString("C")
+                                </span>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(expense.Description))
+                            {
+                                <div class="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                                    @expense.Description
+                                </div>
+                            }
+                            
+                            <div class="flex justify-end pt-2 border-t mt-1 gap-2">
+                                <button @onclick="() => EditExpense(expense)" class="bg-blue-50 text-blue-600 px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                                    ✏️ Edit
+                                </button>
+                                <button @onclick="() => DeleteExpense(expense.Id)" class="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="hidden md:block overflow-x-auto">
             <table class="w-full min-w-[800px]">
             <thead class="bg-gray-200">
                 <tr>

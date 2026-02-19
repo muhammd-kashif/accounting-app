@@ -26,7 +26,6 @@ namespace AccountingApp.Data
         public DbSet<BillPayment> BillPayments { get; set; }
         
         // Bookshop Stationary System
-        public DbSet<Item> Items { get; set; }
         public DbSet<Sale> Sales { get; set; }
         public DbSet<SaleItem> SaleItems { get; set; }
         public DbSet<SalePayment> SalePayments { get; set; }
@@ -157,10 +156,7 @@ namespace AccountingApp.Data
                 .Property(bp => bp.Amount)
                 .HasColumnType("decimal(18,2)");
 
-            // Bookshop Stationary System Configurations
-            modelBuilder.Entity<Item>()
-                .Property(i => i.Price)
-                .HasColumnType("decimal(18,2)");
+
 
             modelBuilder.Entity<Sale>()
                 .Property(s => s.TotalAmount)
@@ -217,25 +213,7 @@ namespace AccountingApp.Data
                 .Property(sp => sp.Amount)
                 .HasColumnType("decimal(18,2)");
 
-            // Seed data for stationary items
-            var seedDate = new DateTime(2026, 2, 11, 0, 0, 0, DateTimeKind.Utc);
-            modelBuilder.Entity<Item>().HasData(
-                new Item { Id = 1, Name = "Notebook A4", Category = "Notebooks", Price = 150m, StockQuantity = 100, Description = "A4 size notebook with 200 pages", CreatedDate = seedDate },
-                new Item { Id = 2, Name = "Notebook B5", Category = "Notebooks", Price = 100m, StockQuantity = 150, Description = "B5 size notebook with 150 pages", CreatedDate = seedDate },
-                new Item { Id = 3, Name = "Pen Blue", Category = "Pens", Price = 20m, StockQuantity = 500, Description = "Blue ballpoint pen", CreatedDate = seedDate },
-                new Item { Id = 4, Name = "Pen Black", Category = "Pens", Price = 20m, StockQuantity = 500, Description = "Black ballpoint pen", CreatedDate = seedDate },
-                new Item { Id = 5, Name = "Pen Red", Category = "Pens", Price = 20m, StockQuantity = 300, Description = "Red ballpoint pen", CreatedDate = seedDate },
-                new Item { Id = 6, Name = "Pencil HB", Category = "Pencils", Price = 10m, StockQuantity = 400, Description = "HB grade pencil", CreatedDate = seedDate },
-                new Item { Id = 7, Name = "Eraser", Category = "Accessories", Price = 15m, StockQuantity = 300, Description = "White eraser", CreatedDate = seedDate },
-                new Item { Id = 8, Name = "Sharpener", Category = "Accessories", Price = 25m, StockQuantity = 250, Description = "Metal sharpener", CreatedDate = seedDate },
-                new Item { Id = 9, Name = "Ruler 30cm", Category = "Accessories", Price = 30m, StockQuantity = 200, Description = "30cm plastic ruler", CreatedDate = seedDate },
-                new Item { Id = 10, Name = "Marker Set", Category = "Markers", Price = 200m, StockQuantity = 80, Description = "Set of 12 colored markers", CreatedDate = seedDate },
-                new Item { Id = 11, Name = "Stapler", Category = "Office Supplies", Price = 250m, StockQuantity = 50, Description = "Standard stapler with staples", CreatedDate = seedDate },
-                new Item { Id = 12, Name = "Highlighter Yellow", Category = "Markers", Price = 35m, StockQuantity = 200, Description = "Yellow highlighter", CreatedDate = seedDate },
-                new Item { Id = 13, Name = "Highlighter Pink", Category = "Markers", Price = 35m, StockQuantity = 200, Description = "Pink highlighter", CreatedDate = seedDate },
-                new Item { Id = 14, Name = "Scissors", Category = "Office Supplies", Price = 120m, StockQuantity = 100, Description = "Stainless steel scissors", CreatedDate = seedDate },
-                new Item { Id = 15, Name = "Glue Stick", Category = "Adhesives", Price = 40m, StockQuantity = 180, Description = "40g glue stick", CreatedDate = seedDate }
-            );
+
         }
     }
 }

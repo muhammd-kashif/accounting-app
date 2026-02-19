@@ -6,93 +6,93 @@
 @inject IExpenseService ExpenseService
 @inject IReportService ReportService
 
-<div class="p-8 bg-gray-100 min-h-screen">
-    <div class="mb-8">
-        <h1 class="text-4xl font-bold text-gray-800">📊 Dashboard</h1>
-        <p class="text-gray-500 mt-2">@DateTime.Now.ToString("dddd, MMMM dd, yyyy")</p>
+<div class="p-4 md:p-8 bg-gray-100 min-h-screen">
+    <div class="mb-6 md:mb-8">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800">📊 Dashboard</h1>
+        <p class="text-gray-500 mt-2 text-sm md:text-base">@DateTime.Now.ToString("dddd, MMMM dd, yyyy")</p>
     </div>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6 mb-8">
         <!-- Total Income -->
-        <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+        <div class="bg-white rounded-lg shadow-md p-4 md:p-6 hover:shadow-lg transition">
             <div class="flex justify-between items-center">
                 <div>
-                    <p class="text-gray-500 text-sm">💰 Total Income</p>
-                    <p class="text-3xl font-bold text-green-600">Rs. @totalIncome.ToString("N0")</p>
+                    <p class="text-gray-500 text-xs md:text-sm">💰 Total Income</p>
+                    <p class="text-xl md:text-2xl xl:text-3xl font-bold text-green-600">Rs. @totalIncome.ToString("N0")</p>
                 </div>
-                <div class="text-5xl text-green-200">↑</div>
+                <div class="text-3xl md:text-4xl xl:text-5xl text-green-200">↑</div>
             </div>
         </div>
 
         <!-- Total Expense -->
-        <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+        <div class="bg-white rounded-lg shadow-md p-4 md:p-6 hover:shadow-lg transition">
             <div class="flex justify-between items-center">
                 <div>
-                    <p class="text-gray-500 text-sm">💸 Total Expense</p>
-                    <p class="text-3xl font-bold text-red-600">Rs. @totalExpense.ToString("N0")</p>
+                    <p class="text-gray-500 text-xs md:text-sm">💸 Total Expense</p>
+                    <p class="text-xl md:text-2xl xl:text-3xl font-bold text-red-600">Rs. @totalExpense.ToString("N0")</p>
                 </div>
-                <div class="text-5xl text-red-200">↓</div>
+                <div class="text-3xl md:text-4xl xl:text-5xl text-red-200">↓</div>
             </div>
         </div>
 
         <!-- Net Balance -->
-        <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+        <div class="bg-white rounded-lg shadow-md p-4 md:p-6 hover:shadow-lg transition">
             <div class="flex justify-between items-center">
                 <div>
-                    <p class="text-gray-500 text-sm">⚖️ Net Balance</p>
-                    <p class="text-3xl font-bold @(netBalance >= 0 ? "text-blue-600" : "text-red-600")">Rs. @netBalance.ToString("N0")</p>
+                    <p class="text-gray-500 text-xs md:text-sm">⚖️ Net Balance</p>
+                    <p class="text-xl md:text-2xl xl:text-3xl font-bold @(netBalance >= 0 ? "text-blue-600" : "text-red-600")">Rs. @netBalance.ToString("N0")</p>
                 </div>
-                <div class="text-5xl text-blue-200">⚖️</div>
+                <div class="text-3xl md:text-4xl xl:text-5xl text-blue-200">⚖️</div>
             </div>
         </div>
 
         <!-- Profit / Loss -->
-        <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+        <div class="bg-white rounded-lg shadow-md p-4 md:p-6 hover:shadow-lg transition">
             <div class="flex justify-between items-center">
                 <div>
-                    <p class="text-gray-500 text-sm">📈 Profit / Loss</p>
-                    <p class="text-3xl font-bold @profitLossColor">Rs. @profitOrLoss.ToString("N0")</p>
-                    <p class="text-sm font-semibold @profitLossColor">@profitLossLabel</p>
+                    <p class="text-gray-500 text-xs md:text-sm">📈 Profit / Loss</p>
+                    <p class="text-xl md:text-2xl xl:text-3xl font-bold @profitLossColor">Rs. @profitOrLoss.ToString("N0")</p>
+                    <p class="text-xs font-semibold @profitLossColor">@profitLossLabel</p>
                 </div>
-                <div class="text-5xl @(profitLossLabel == "Profit" ? "text-green-200" : "text-red-200")">
+                <div class="text-3xl md:text-4xl xl:text-5xl @(profitLossLabel == "Profit" ? "text-green-200" : "text-red-200")">
                     @(profitLossLabel == "Profit" ? "📈" : "📉")
                 </div>
             </div>
         </div>
 
         <!-- Today Transactions -->
-        <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+        <div class="bg-white rounded-lg shadow-md p-4 md:p-6 hover:shadow-lg transition">
             <div class="flex justify-between items-center">
                 <div>
-                    <p class="text-gray-500 text-sm">📅 Today Transactions</p>
-                    <p class="text-3xl font-bold text-purple-600">Rs. @todayTransactions.ToString("N0")</p>
+                    <p class="text-gray-500 text-xs md:text-sm">📅 Today Transactions</p>
+                    <p class="text-xl md:text-2xl xl:text-3xl font-bold text-purple-600">Rs. @todayTransactions.ToString("N0")</p>
                 </div>
-                <div class="text-5xl text-purple-200">📅</div>
+                <div class="text-3xl md:text-4xl xl:text-5xl text-purple-200">📅</div>
             </div>
         </div>
 
           <!-- Accounts Receivable -->
-            <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+            <div class="bg-white rounded-lg shadow-md p-4 md:p-6 hover:shadow-lg transition">
                 <div class="flex justify-between items-center">
                     <div>
-                        <p class="text-gray-500 text-sm">📋 Accounts Receivable</p>
-                        <p class="text-3xl font-bold text-yellow-600">Rs. @totalReceivables.ToString("N0")</p>
+                        <p class="text-gray-500 text-xs md:text-sm">📋 Accounts Receivable</p>
+                        <p class="text-xl md:text-2xl xl:text-3xl font-bold text-yellow-600">Rs. @totalReceivables.ToString("N0")</p>
                     </div>
-                    <div class="text-5xl text-yellow-200">💳</div>
+                    <div class="text-3xl md:text-4xl xl:text-5xl text-yellow-200">💳</div>
                 </div>
             </div>
     </div>
 
     <!-- Overview Charts -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div class="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
+        <div class="lg:col-span-2 bg-white rounded-lg shadow-md p-4 md:p-6">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">📊 Overview Chart</h2>
 
             <div class="space-y-4">
                 @* Total Income *@
                 <div>
-                    <div class="flex justify-between text-sm text-gray-600 mb-1">
+                    <div class="flex justify-between text-xs md:text-sm text-gray-600 mb-1">
                         <span>Total Income</span>
                         <span class="font-semibold text-green-600">Rs. @totalIncome.ToString("N0")</span>
                     </div>
@@ -103,7 +103,7 @@
 
                 @* Total Expense *@
                 <div>
-                    <div class="flex justify-between text-sm text-gray-600 mb-1">
+                    <div class="flex justify-between text-xs md:text-sm text-gray-600 mb-1">
                         <span>Total Expense</span>
                         <span class="font-semibold text-red-600">Rs. @totalExpense.ToString("N0")</span>
                     </div>
@@ -114,7 +114,7 @@
 
                 @* Net Balance *@
                 <div>
-                    <div class="flex justify-between text-sm text-gray-600 mb-1">
+                    <div class="flex justify-between text-xs md:text-sm text-gray-600 mb-1">
                         <span>Net Balance</span>
                         <span class="font-semibold @(netBalance >= 0 ? "text-blue-600" : "text-orange-600")">Rs. @netBalance.ToString("N0")</span>
                     </div>
@@ -125,7 +125,7 @@
 
                 @* Today Transactions *@
                 <div>
-                    <div class="flex justify-between text-sm text-gray-600 mb-1">
+                    <div class="flex justify-between text-xs md:text-sm text-gray-600 mb-1">
                         <span>Today Transactions</span>
                         <span class="font-semibold text-purple-600">Rs. @todayTransactions.ToString("N0")</span>
                     </div>
@@ -136,7 +136,7 @@
 
                 @* Profit *@
                 <div>
-                    <div class="flex justify-between text-sm mb-1">
+                    <div class="flex justify-between text-xs md:text-sm mb-1">
                         <span>Profit</span>
                         <span class="text-green-600 font-semibold">Rs. @profitAmount.ToString("N0")</span>
                     </div>
@@ -147,7 +147,7 @@
 
                 @* Loss *@
                 <div>
-                    <div class="flex justify-between text-sm mb-1">
+                    <div class="flex justify-between text-xs md:text-sm mb-1">
                         <span>Loss</span>
                         <span class="text-red-600 font-semibold">Rs. @lossAmount.ToString("N0")</span>
                     </div>
@@ -159,15 +159,22 @@
         </div>
 
         @* Income vs Expense Pie *@
-        <div class="bg-white rounded-lg shadow-md p-6 flex flex-col items-center">
+        <div class="bg-white rounded-lg shadow-md p-4 md:p-6 flex flex-col items-center">
             <h2 class="text-xl font-semibold text-gray-800 mb-4">🥧 Income vs Expense</h2>
-            <div class="w-48 h-48 rounded-full" style="background: conic-gradient(#22c55e 0% @GetPiePercent(totalIncome)%, #ef4444 @GetPiePercent(totalIncome)% 100%);"></div>
-            <div class="mt-4 text-sm text-gray-600 w-full">
-                <div class="flex justify-between">
+            <div class="relative w-40 h-40 md:w-48 md:h-48 rounded-full" style="background: conic-gradient(#22c55e 0% @GetPiePercent(totalIncome)%, #ef4444 @GetPiePercent(totalIncome)% 100%);">
+                 <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div class="bg-white w-20 h-20 md:w-24 md:h-24 rounded-full flex flex-col items-center justify-center shadow-inner">
+                         <span class="text-[10px] md:text-xs text-gray-400 uppercase">Ratio</span>
+                         <span class="text-sm md:text-base font-bold text-gray-700">@GetPiePercent(totalIncome)%</span>
+                    </div>
+                 </div>
+            </div>
+            <div class="mt-6 text-xs md:text-sm text-gray-600 w-full">
+                <div class="flex justify-between p-2 rounded hover:bg-green-50 transition">
                     <span class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded-full bg-green-500"></span>Income</span>
                     <span class="font-semibold text-green-600">Rs. @totalIncome.ToString("N0")</span>
                 </div>
-                <div class="flex justify-between mt-2">
+                <div class="flex justify-between p-2 rounded hover:bg-red-50 transition mt-1">
                     <span class="flex items-center gap-2"><span class="inline-block w-3 h-3 rounded-full bg-red-500"></span>Expense</span>
                     <span class="font-semibold text-red-600">Rs. @totalExpense.ToString("N0")</span>
                 </div>

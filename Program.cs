@@ -26,8 +26,7 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IPurchaseService, PurchaseService>();
 builder.Services.AddScoped<IBillService, BillService>();
 
-// Bookshop Stationary Services
-builder.Services.AddScoped<IItemService, ItemService>();
+
 builder.Services.AddScoped<ISaleService, SaleService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 

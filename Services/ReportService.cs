@@ -74,10 +74,10 @@ namespace AccountingApp.Services
                     Id = i.Id,
                     Date = i.Date ?? DateTime.MinValue,
                     Description = i.Description ?? "No description",
-                    Amount = i.Amount,
+                    Amount = i.Amount, // Assuming Amount is not nullable or handled
                     Type = "Income",
                     Category = i.PaymentType ?? "General",
-                    EntityName = i.Customer != null ? i.Customer.Name : "General"
+                    EntityName = i.Customer != null ? (i.Customer.Name ?? "Unknown") : "General"
                 })
                 .ToListAsync();
 
@@ -88,7 +88,7 @@ namespace AccountingApp.Services
                 .Select(e => new RecentTransactionDto
                 {
                     Id = e.Id,
-                    Date = e.Date,
+                    Date = e.Date, // Assuming e.Date is DateTime (non-nullable) or nullable
                     Description = e.Description ?? "No description",
                     Amount = e.Amount,
                     Type = "Expense",
@@ -101,6 +101,35 @@ namespace AccountingApp.Services
                 .OrderByDescending(t => t.Date)
                 .Take(count)
                 .ToList();
+        }
+
+        public async Task<List<ChartDataPoint>> GetDailyTotalsAsync(int userId, int days)
+        {
+             var startDate = DateTime.Today.AddDays(-days);
+
+            var incomeData = await _context.Incomes
+                .Where(i => i.UserId == userId && i.Date >= startDate)
+                .GroupBy(i => i.Date.Value.Date)
+                .Select(g => new
+                {
+                    Date = g.Key,
+                    Total = g.Sum(x => x.Amount)
+                })
+                .ToListAsync();
+
+            var result = new List<ChartDataPoint>();
+            for (var i = 0; i <= days; i++)
+            {
+                var date = startDate.AddDays(i);
+                var dayData = incomeData.FirstOrDefault(d => d.Date == date);
+                result.Add(new ChartDataPoint
+                {
+                    Label = date.ToString("MMM dd"),
+                    Value = dayData?.Total ?? 0
+                });
+            }
+
+            return result;
         }
     }
 }

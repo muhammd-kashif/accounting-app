@@ -97,7 +97,7 @@
     }
 
     <!-- Summary Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div class="bg-white rounded-lg shadow p-4 text-center">
             <p class="text-sm text-gray-500">📦 Inventory Items</p>
             <p class="text-2xl font-bold text-indigo-600">@products.Count(p => p.ItemType == "Inventory")</p>
@@ -122,7 +122,7 @@
 
     <!-- SEARCH BAR -->
     <div class="mb-6">
-        <div class="relative max-w-md">
+        <div class="relative w-full md:max-w-md">
             <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                 🔍
             </span>
@@ -133,8 +133,8 @@
     </div>
 
     <!-- Tab Navigation -->
-    <div class="mb-4 border-b border-gray-200">
-        <nav class="-mb-px flex space-x-8">
+    <div class="mb-4 border-b border-gray-200 overflow-x-auto">
+        <nav class="-mb-px flex space-x-8 min-w-max">
             <button @onclick='() => activeTab = "inventory"' 
                     class="@(activeTab == "inventory" ? "border-indigo-500 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300") whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                 📦 Inventory Items (@products.Count(p => p.ItemType == "Inventory"))
@@ -158,10 +158,63 @@
         <div class="bg-white rounded-lg shadow-md overflow-hidden">
             <div class="bg-blue-50 px-4 py-3 border-b border-blue-200">
                 <p class="text-sm text-blue-800">
-                    <strong>📦 Inventory Items:</strong> Stock is tracked with quantity, cost, and reorder levels. These items are stored in warehouse.
+                    <strong>📦 Inventory Items:</strong> Stock is tracked with quantity, cost, and reorder levels.
                 </p>
             </div>
-            <div class="overflow-x-auto">
+            
+            <!-- Mobile Card View -->
+            <div class="block md:hidden pb-4">
+                 @if (!GetFilteredInventoryProducts().Any())
+                {
+                    <div class="p-8 text-center text-gray-500">No inventory items found.</div>
+                }
+                else 
+                {
+                    <div class="space-y-4 px-4 pt-4">
+                        @foreach (var product in GetFilteredInventoryProducts())
+                        {
+                             var pid = product.Id;
+                             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <div class="font-bold text-gray-800 text-lg">@product.ItemName</div>
+                                        <div class="text-xs text-gray-500">SKU: @product.SKU</div>
+                                    </div>
+                                    <div class="text-right">
+                                         <div class="text-xs text-gray-400 font-bold uppercase">Stock</div>
+                                         <div class="font-bold text-xl @(product.StockQuantity <= product.ReorderLevel ? "text-red-600" : "text-gray-800")">
+                                             @product.StockQuantity
+                                         </div>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2 text-sm bg-gray-50 p-2 rounded border border-gray-50">
+                                    <div>
+                                        <span class="text-gray-400 text-xs block">Sale Price</span>
+                                        <span class="font-bold text-green-600">@product.SalePrice.ToString("C")</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-gray-400 text-xs block">Cost</span>
+                                        <span class="font-medium text-gray-600">@product.PurchasePrice.ToString("C")</span>
+                                    </div>
+                                </div>
+
+                                <div class="flex gap-2 justify-end border-t pt-2">
+                                    <button @onclick="() => OpenEditForm(pid)" class="bg-blue-50 text-blue-600 px-3 py-2 rounded-lg text-sm font-bold flex-1 flex items-center justify-center gap-2">
+                                        ✏️ Edit
+                                    </button>
+                                    <button @onclick="() => HandleDelete(pid)" class="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
+                                        🗑️
+                                    </button>
+                                </div>
+                             </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Desktop Table View -->
+            <div class="hidden md:block overflow-x-auto">
                 <table class="w-full min-w-[900px]">
                     <thead class="bg-gray-200">
                         <tr>
@@ -219,10 +272,56 @@
         <div class="bg-white rounded-lg shadow-md overflow-hidden">
             <div class="bg-purple-50 px-4 py-3 border-b border-purple-200">
                 <p class="text-sm text-purple-800">
-                    <strong>📋 Non-Inventory Items:</strong> No stock tracking. Used for services, one-time purchases, and office supplies that don't need quantity management.
+                    <strong>📋 Non-Inventory Items:</strong> No stock tracking. Used for services, one-time purchases, etc.
                 </p>
             </div>
-            <div class="overflow-x-auto">
+            
+            <!-- Mobile Card View -->
+            <div class="block md:hidden pb-4">
+                 @if (!GetFilteredNonInventoryProducts().Any())
+                {
+                    <div class="p-8 text-center text-gray-500">No items found.</div>
+                }
+                else 
+                {
+                    <div class="space-y-4 px-4 pt-4">
+                        @foreach (var product in GetFilteredNonInventoryProducts())
+                        {
+                             var pid = product.Id;
+                             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <div class="font-bold text-gray-800 text-lg">@product.ItemName</div>
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase @GetTypeBadge(product.ItemType) inline-block mt-1">
+                                            @product.ItemType
+                                        </span>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-bold text-xl text-green-600">@product.SalePrice.ToString("C")</div>
+                                        <div class="text-xs text-red-600">Exp: @GetProductExpense(product.Id).ToString("N0")</div>
+                                    </div>
+                                </div>
+                                
+                                @if(!string.IsNullOrEmpty(product.SKU)) {
+                                    <div class="text-xs text-gray-400">SKU: @product.SKU</div>
+                                }
+
+                                <div class="flex gap-2 justify-end border-t pt-2 mt-1">
+                                    <button @onclick="() => OpenEditForm(pid)" class="bg-blue-50 text-blue-600 px-3 py-2 rounded-lg text-sm font-bold flex-1 flex items-center justify-center gap-2">
+                                        ✏️ Edit
+                                    </button>
+                                    <button @onclick="() => HandleDelete(pid)" class="bg-red-50 text-red-600 px-3 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2">
+                                        🗑️
+                                    </button>
+                                </div>
+                             </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Desktop Table View -->
+            <div class="hidden md:block overflow-x-auto">
                 <table class="w-full min-w-[800px]">
                     <thead class="bg-gray-200">
                         <tr>

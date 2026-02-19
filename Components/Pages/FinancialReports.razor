@@ -4,18 +4,18 @@
 @using Microsoft.EntityFrameworkCore
 @inject IFinancialReportService FinancialReportService
 
-<div class="p-8 bg-gray-100 min-h-screen">
-    <div class="mb-8">
-        <h1 class="text-4xl font-bold text-gray-800">📊 Financial Reports</h1>
-        <p class="text-gray-500 mt-2">Comprehensive financial statements and analysis</p>
+<div class="p-4 md:p-8 bg-gray-100 min-h-screen">
+    <div class="mb-6 md:mb-8">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800">📊 Financial Reports</h1>
+        <p class="text-gray-500 mt-2 text-sm md:text-base">Comprehensive financial statements and analysis</p>
     </div>
 
     <!-- Date Range Selector -->
-    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div class="bg-white rounded-lg shadow-md p-4 md:p-6 mb-6">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Period Type</label>
-                <select @bind="selectedPeriod" @bind:after="OnPeriodChanged" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <select @bind="selectedPeriod" @bind:after="OnPeriodChanged" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                     <option value="custom">Custom Range</option>
                     <option value="thisMonth">This Month</option>
                     <option value="lastMonth">Last Month</option>
@@ -26,14 +26,14 @@
             </div>
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Start Date</label>
-                <input type="date" @bind="startDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                <input type="date" @bind="startDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" />
             </div>
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">End Date</label>
-                <input type="date" @bind="endDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                <input type="date" @bind="endDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" />
             </div>
             <div class="flex items-end">
-                <button @onclick="LoadReports" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition">
+                <button @onclick="LoadReports" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition text-sm">
                     🔄 Generate Reports
                 </button>
             </div>
@@ -50,21 +50,21 @@
     else
     {
         <div class="mb-6">
-            <div class="flex gap-2 border-b border-gray-300">
+            <div class="flex gap-2 border-b border-gray-300 overflow-x-auto whitespace-nowrap no-scrollbar pb-px">
                 <button @onclick="@(() => activeTab = "profitLoss")" 
-                        class="px-6 py-3 font-semibold transition @(activeTab == "profitLoss" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600 hover:text-blue-600")">
+                        class="px-4 md:px-6 py-3 font-semibold transition text-sm md:text-base @(activeTab == "profitLoss" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600 hover:text-blue-600")">
                     📈 Profit & Loss
                 </button>
                 <button @onclick="@(() => activeTab = "cashFlow")" 
-                        class="px-6 py-3 font-semibold transition @(activeTab == "cashFlow" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600 hover:text-blue-600")">
+                        class="px-4 md:px-6 py-3 font-semibold transition text-sm md:text-base @(activeTab == "cashFlow" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600 hover:text-blue-600")">
                     💵 Cash Flow
                 </button>
                 <button @onclick="@(() => activeTab = "balanceSheet")" 
-                        class="px-6 py-3 font-semibold transition @(activeTab == "balanceSheet" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600 hover:text-blue-600")">
+                        class="px-4 md:px-6 py-3 font-semibold transition text-sm md:text-base @(activeTab == "balanceSheet" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600 hover:text-blue-600")">
                     ⚖️ Balance Sheet
                 </button>
                 <button @onclick="@(() => activeTab = "salarySheet")" 
-                        class="px-6 py-3 font-semibold transition @(activeTab == "salarySheet" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600 hover:text-blue-600")">
+                        class="px-4 md:px-6 py-3 font-semibold transition text-sm md:text-base @(activeTab == "salarySheet" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-600 hover:text-blue-600")">
                     👥 Salary Sheet
                 </button>
             </div>
@@ -84,18 +84,17 @@
         @if (activeTab == "profitLoss" && profitLoss != null)
         {
             <!-- Profit & Loss Statement -->
-            <!-- ... (existing P&L content) ... -->
-            <div class="bg-white rounded-lg shadow-md p-8">
+            <div class="bg-white rounded-lg shadow-md p-4 md:p-8">
                 <div class="text-center mb-6">
-                    <h2 class="text-3xl font-bold text-gray-800">Profit & Loss Statement</h2>
-                    <p class="text-gray-600 mt-2">@profitLoss.StartDate.ToString("MMM dd, yyyy") - @profitLoss.EndDate.ToString("MMM dd, yyyy")</p>
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Profit & Loss Statement</h2>
+                    <p class="text-gray-600 mt-2 text-sm md:text-base">@profitLoss.StartDate.ToString("MMM dd, yyyy") - @profitLoss.EndDate.ToString("MMM dd, yyyy")</p>
                 </div>
 
                 <div class="space-y-6">
                     <!-- Revenue Section -->
                     <div>
-                        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b-2 border-gray-300 pb-2">Revenue</h3>
-                        <div class="pl-4 space-y-2">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4 border-b-2 border-gray-300 pb-2">Revenue</h3>
+                        <div class="pl-2 md:pl-4 space-y-2 text-sm md:text-base">
                             <div class="flex justify-between">
                                 <span class="text-gray-700">Sales Revenue</span>
                                 <span class="font-semibold text-green-600">Rs. @profitLoss.TotalSalesRevenue.ToString("N2")</span>
@@ -104,7 +103,7 @@
                                 <span class="text-gray-700">Other Income</span>
                                 <span class="font-semibold text-green-600">Rs. @profitLoss.TotalOtherIncome.ToString("N2")</span>
                             </div>
-                            <div class="flex justify-between font-bold text-lg border-t pt-2">
+                            <div class="flex justify-between font-bold text-base md:text-lg border-t pt-2 mt-1">
                                 <span class="text-gray-800">Total Revenue</span>
                                 <span class="text-green-600">Rs. @profitLoss.TotalRevenue.ToString("N2")</span>
                             </div>
@@ -113,9 +112,9 @@
 
                     <!-- COGS Section -->
                     <div>
-                        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b-2 border-gray-300 pb-2">Cost of Goods Sold</h3>
-                        <div class="pl-4">
-                            <div class="flex justify-between font-bold text-lg">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4 border-b-2 border-gray-300 pb-2">Cost of Goods Sold</h3>
+                        <div class="pl-2 md:pl-4">
+                            <div class="flex justify-between font-bold text-base md:text-lg">
                                 <span class="text-gray-800">Total COGS</span>
                                 <span class="text-red-600">Rs. @profitLoss.TotalCostOfGoodsSold.ToString("N2")</span>
                             </div>
@@ -124,9 +123,9 @@
 
                     <!-- Gross Profit -->
                     <div class="bg-blue-50 p-4 rounded-lg">
-                        <div class="flex justify-between text-xl font-bold">
+                        <div class="flex justify-between text-lg md:text-xl font-bold">
                             <span class="text-gray-800">Gross Profit</span>
-                            <span class="@(profitLoss.GrossProfit >= 0 ? "text-green-600" : "text-red-600")">
+                            <span class="@(profitLoss.GrossProfit >= 0 ? "text-green-600" : "text-red-600") text-right">
                                 Rs. @profitLoss.GrossProfit.ToString("N2")
                             </span>
                         </div>
@@ -134,8 +133,8 @@
 
                     <!-- Operating Expenses -->
                     <div>
-                        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b-2 border-gray-300 pb-2">Operating Expenses</h3>
-                        <div class="pl-4 space-y-2">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4 border-b-2 border-gray-300 pb-2">Operating Expenses</h3>
+                        <div class="pl-2 md:pl-4 space-y-2 text-sm md:text-base">
                             @foreach (var expense in profitLoss.ExpenseBreakdown)
                             {
                                 <div class="flex justify-between">
@@ -143,7 +142,7 @@
                                     <span class="font-semibold text-red-600">Rs. @expense.Amount.ToString("N2")</span>
                                 </div>
                             }
-                            <div class="flex justify-between font-bold text-lg border-t pt-2">
+                            <div class="flex justify-between font-bold text-base md:text-lg border-t pt-2 mt-1">
                                 <span class="text-gray-800">Total Operating Expenses</span>
                                 <span class="text-red-600">Rs. @profitLoss.TotalOperatingExpenses.ToString("N2")</span>
                             </div>
@@ -151,12 +150,15 @@
                     </div>
 
                     <!-- Net Income -->
-                    <div class="@(profitLoss.NetIncome >= 0 ? "bg-green-50" : "bg-red-50") p-6 rounded-lg border-2 @(profitLoss.NetIncome >= 0 ? "border-green-300" : "border-red-300")">
-                        <div class="flex justify-between text-2xl font-bold">
-                            <span class="text-gray-800">Net Income @(profitLoss.NetIncome >= 0 ? "(Profit)" : "(Loss)")</span>
-                            <span class="@(profitLoss.NetIncome >= 0 ? "text-green-600" : "text-red-600")">
+                    <div class="@(profitLoss.NetIncome >= 0 ? "bg-green-50" : "bg-red-50") p-4 md:p-6 rounded-lg border-2 @(profitLoss.NetIncome >= 0 ? "border-green-300" : "border-red-300")">
+                        <div class="flex justify-between text-xl md:text-2xl font-bold">
+                            <span class="text-gray-800">Net Income</span>
+                            <span class="@(profitLoss.NetIncome >= 0 ? "text-green-600" : "text-red-600") text-right">
                                 Rs. @profitLoss.NetIncome.ToString("N2")
                             </span>
+                        </div>
+                        <div class="text-right text-xs md:text-sm @(profitLoss.NetIncome >= 0 ? "text-green-500" : "text-red-500") font-semibold mt-1">
+                             @(profitLoss.NetIncome >= 0 ? "PROFIT" : "LOSS")
                         </div>
                     </div>
                 </div>
@@ -166,22 +168,45 @@
         @if (activeTab == "salarySheet")
         {
             <!-- Salary Sheet -->
-            <div class="bg-white rounded-lg shadow-md p-8">
+            <div class="bg-white rounded-lg shadow-md p-4 md:p-8">
                 <div class="text-center mb-6">
-                    <h2 class="text-3xl font-bold text-gray-800">👥 Salary Sheet</h2>
-                    <p class="text-gray-600 mt-2">@startDate.ToString("MMM dd, yyyy") - @endDate.ToString("MMM dd, yyyy")</p>
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800">👥 Salary Sheet</h2>
+                    <p class="text-gray-600 mt-2 text-sm md:text-base">@startDate.ToString("MMM dd, yyyy") - @endDate.ToString("MMM dd, yyyy")</p>
                 </div>
 
                 @if (salaryExpenses == null || !salaryExpenses.Any())
                 {
                      <div class="text-center py-8 text-gray-500">
-                        <p class="text-lg">No salary records found for this period.</p>
-                        <p class="text-sm mt-2">Ensure expenses are categorized as "Salary".</p>
+                        <p class="text-base md:text-lg">No salary records found for this period.</p>
+                        <p class="text-xs md:text-sm mt-2">Ensure expenses are categorized as "Salary".</p>
                     </div>
                 }
                 else
                 {
-                    <div class="overflow-x-auto">
+                    <!-- Mobile Card View -->
+                    <div class="block md:hidden space-y-4">
+                        @foreach (var salary in salaryExpenses)
+                        {
+                            <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 flex justify-between items-center">
+                                <div>
+                                    <div class="font-bold text-gray-800">@salary.Description</div>
+                                    <div class="text-xs text-gray-500">@salary.Date.ToString("dd MMM yyyy")</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="font-bold text-red-600">Rs. @salary.Amount.ToString("N2")</div>
+                                </div>
+                            </div>
+                        }
+                        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 mt-4">
+                             <div class="flex justify-between items-center font-bold">
+                                 <span class="text-gray-700">Total:</span>
+                                 <span class="text-red-600">Rs. @salaryExpenses.Sum(s => s.Amount).ToString("N2")</span>
+                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Desktop Table View -->
+                    <div class="hidden md:block overflow-x-auto">
                         <table class="min-w-full table-auto border border-gray-200">
                             <thead class="bg-gray-100">
                                 <tr>
@@ -217,18 +242,17 @@
         @if (activeTab == "cashFlow" && cashFlow != null)
         {
             <!-- Cash Flow Statement -->
-             <div class="bg-white rounded-lg shadow-md p-8">
+             <div class="bg-white rounded-lg shadow-md p-4 md:p-8">
                 <div class="text-center mb-6">
-                    <h2 class="text-3xl font-bold text-gray-800">Cash Flow Statement</h2>
-                    <p class="text-gray-600 mt-2">@cashFlow.StartDate.ToString("MMM dd, yyyy") - @cashFlow.EndDate.ToString("MMM dd, yyyy")</p>
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Cash Flow Statement</h2>
+                    <p class="text-gray-600 mt-2 text-sm md:text-base">@cashFlow.StartDate.ToString("MMM dd, yyyy") - @cashFlow.EndDate.ToString("MMM dd, yyyy")</p>
                 </div>
 
-                <!-- ... (rest of Cash Flow content from original file) ... -->
                 <div class="space-y-6">
                     <!-- Operating Activities -->
                     <div>
-                        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b-2 border-blue-300 pb-2">Cash Flow from Operating Activities</h3>
-                        <div class="pl-4 space-y-2">
+                        <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-4 border-b-2 border-blue-300 pb-2">Cash Flow from Operating Activities</h3>
+                        <div class="pl-2 md:pl-4 space-y-2 text-sm md:text-base">
                             <div class="flex justify-between">
                                 <span class="text-gray-700">Cash Received from Customers</span>
                                 <span class="font-semibold text-green-600">Rs. @cashFlow.CashReceivedFromCustomers.ToString("N2")</span>
@@ -241,7 +265,7 @@
                                 <span class="text-gray-700">Operating Expenses Paid</span>
                                 <span class="font-semibold text-red-600">(Rs. @cashFlow.OperatingExpensesPaid.ToString("N2"))</span>
                             </div>
-                            <div class="flex justify-between font-bold text-lg border-t pt-2">
+                            <div class="flex justify-between font-bold text-base md:text-lg border-t pt-2 mt-1">
                                 <span class="text-gray-800">Net Cash from Operating</span>
                                 <span class="@(cashFlow.NetCashFromOperating >= 0 ? "text-green-600" : "text-red-600")">
                                     Rs. @cashFlow.NetCashFromOperating.ToString("N2")
@@ -255,29 +279,29 @@
 
                     <!-- Net Cash Flow -->
                      <div class="bg-blue-50 p-4 rounded-lg">
-                        <div class="flex justify-between text-xl font-bold">
+                        <div class="flex justify-between text-lg md:text-xl font-bold">
                             <span class="text-gray-800">Net Increase/(Decrease) in Cash</span>
-                            <span class="@(cashFlow.NetCashFlow >= 0 ? "text-green-600" : "text-red-600")">
+                            <span class="@(cashFlow.NetCashFlow >= 0 ? "text-green-600" : "text-red-600") text-right">
                                 Rs. @cashFlow.NetCashFlow.ToString("N2")
                             </span>
                         </div>
                     </div>
 
                     <!-- Cash Position -->
-                    <div class="border-t-2 pt-4 space-y-2">
-                        <div class="flex justify-between text-lg">
+                    <div class="border-t-2 pt-4 space-y-2 text-sm md:text-base">
+                        <div class="flex justify-between">
                             <span class="text-gray-700">Cash at Beginning of Period</span>
                             <span class="font-semibold">Rs. @cashFlow.OpeningCash.ToString("N2")</span>
                         </div>
-                        <div class="flex justify-between text-lg">
+                        <div class="flex justify-between">
                             <span class="text-gray-700">Net Cash Flow</span>
                             <span class="font-semibold @(cashFlow.NetCashFlow >= 0 ? "text-green-600" : "text-red-600")">
                                 Rs. @cashFlow.NetCashFlow.ToString("N2")
                             </span>
                         </div>
-                        <div class="flex justify-between text-2xl font-bold bg-green-50 p-4 rounded-lg border-2 border-green-300">
+                        <div class="flex justify-between text-xl md:text-2xl font-bold bg-green-50 p-4 rounded-lg border-2 border-green-300 mt-2">
                             <span class="text-gray-800">Cash at End of Period</span>
-                            <span class="text-green-600">Rs. @cashFlow.ClosingCash.ToString("N2")</span>
+                            <span class="text-green-600 text-right">Rs. @cashFlow.ClosingCash.ToString("N2")</span>
                         </div>
                     </div>
                 </div>
@@ -287,26 +311,26 @@
         @if (activeTab == "balanceSheet" && balanceSheet != null)
         {
              <!-- Balance Sheet -->
-             <div class="bg-white rounded-lg shadow-md p-8">
+             <div class="bg-white rounded-lg shadow-md p-4 md:p-8">
                 <div class="text-center mb-6">
-                    <h2 class="text-3xl font-bold text-gray-800">Balance Sheet</h2>
-                    <p class="text-gray-600 mt-2">As of @balanceSheet.AsOfDate.ToString("MMM dd, yyyy")</p>
+                    <h2 class="text-2xl md:text-3xl font-bold text-gray-800">Balance Sheet</h2>
+                    <p class="text-gray-600 mt-2 text-sm md:text-base">As of @balanceSheet.AsOfDate.ToString("MMM dd, yyyy")</p>
                     @if (!balanceSheet.IsBalanced)
                     {
-                        <div class="mt-2 bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-2 rounded">
-                            ⚠️ Warning: Balance Sheet is not balanced. Assets ≠ Liabilities + Equity
+                        <div class="mt-2 bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-2 rounded text-xs md:text-sm">
+                            ⚠️ Warning: Assets ≠ Liabilities + Equity
                         </div>
                     }
                 </div>
-                <!-- ... (rest of Balance Sheet content) ... -->
+                
                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <!-- ASSETS -->
                     <div>
-                        <h3 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-blue-400 pb-2">ASSETS</h3>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-4 border-b-2 border-blue-400 pb-2">ASSETS</h3>
                         <div class="space-y-4">
                             <div>
-                                <h4 class="text-lg font-semibold text-gray-700 mb-2">Current Assets</h4>
-                                <div class="pl-4 space-y-2">
+                                <h4 class="text-base md:text-lg font-semibold text-gray-700 mb-2">Current Assets</h4>
+                                <div class="pl-2 md:pl-4 space-y-2 text-sm md:text-base">
                                     <div class="flex justify-between">
                                         <span class="text-gray-700">Cash</span>
                                         <span class="font-semibold">Rs. @balanceSheet.Cash.ToString("N2")</span>
@@ -319,16 +343,16 @@
                                         <span class="text-gray-700">Inventory</span>
                                         <span class="font-semibold">Rs. @balanceSheet.Inventory.ToString("N2")</span>
                                     </div>
-                                    <div class="flex justify-between font-bold border-t pt-2">
+                                    <div class="flex justify-between font-bold border-t pt-2 mt-1">
                                         <span class="text-gray-800">Total Current Assets</span>
                                         <span class="text-blue-600">Rs. @balanceSheet.TotalCurrentAssets.ToString("N2")</span>
                                     </div>
                                 </div>
                             </div>
-                             <div class="bg-blue-50 p-4 rounded-lg">
-                                <div class="flex justify-between text-xl font-bold">
+                             <div class="bg-blue-50 p-3 md:p-4 rounded-lg">
+                                <div class="flex justify-between text-lg md:text-xl font-bold">
                                     <span class="text-gray-800">TOTAL ASSETS</span>
-                                    <span class="text-blue-600">Rs. @balanceSheet.TotalAssets.ToString("N2")</span>
+                                    <span class="text-blue-600 text-right">Rs. @balanceSheet.TotalAssets.ToString("N2")</span>
                                 </div>
                             </div>
                         </div>
@@ -336,17 +360,17 @@
 
                     <!-- LIABILITIES & EQUITY -->
                     <div>
-                        <h3 class="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-red-400 pb-2">LIABILITIES & EQUITY</h3>
+                        <h3 class="text-xl md:text-2xl font-bold text-gray-800 mb-4 border-b-2 border-red-400 pb-2">LIABILITIES & EQUITY</h3>
                         <div class="space-y-4">
                              <!-- Liabilities -->
                             <div>
-                                <h4 class="text-lg font-semibold text-gray-700 mb-2">Current Liabilities</h4>
-                                <div class="pl-4 space-y-2">
+                                <h4 class="text-base md:text-lg font-semibold text-gray-700 mb-2">Current Liabilities</h4>
+                                <div class="pl-2 md:pl-4 space-y-2 text-sm md:text-base">
                                     <div class="flex justify-between">
                                         <span class="text-gray-700">Accounts Payable</span>
                                         <span class="font-semibold">Rs. @balanceSheet.AccountsPayable.ToString("N2")</span>
                                     </div>
-                                    <div class="flex justify-between font-bold border-t pt-2">
+                                    <div class="flex justify-between font-bold border-t pt-2 mt-1">
                                         <span class="text-gray-800">Total Liabilities</span>
                                         <span class="text-red-600">Rs. @balanceSheet.TotalLiabilities.ToString("N2")</span>
                                     </div>
@@ -355,23 +379,23 @@
 
                             <!-- Equity -->
                             <div>
-                                <h4 class="text-lg font-semibold text-gray-700 mb-2">Equity</h4>
-                                <div class="pl-4 space-y-2">
+                                <h4 class="text-base md:text-lg font-semibold text-gray-700 mb-2">Equity</h4>
+                                <div class="pl-2 md:pl-4 space-y-2 text-sm md:text-base">
                                     <div class="flex justify-between">
                                         <span class="text-gray-700">Retained Earnings</span>
                                         <span class="font-semibold">Rs. @balanceSheet.RetainedEarnings.ToString("N2")</span>
                                     </div>
-                                    <div class="flex justify-between font-bold border-t pt-2">
+                                    <div class="flex justify-between font-bold border-t pt-2 mt-1">
                                         <span class="text-gray-800">Total Equity</span>
                                         <span class="text-green-600">Rs. @balanceSheet.TotalEquity.ToString("N2")</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="@(balanceSheet.IsBalanced ? "bg-green-50 border-green-300" : "bg-red-50 border-red-300") p-4 rounded-lg border-2">
-                                <div class="flex justify-between text-xl font-bold">
-                                    <span class="text-gray-800">TOTAL LIABILITIES & EQUITY</span>
-                                    <span class="@(balanceSheet.IsBalanced ? "text-green-600" : "text-red-600")">
+                            <div class="@(balanceSheet.IsBalanced ? "bg-green-50 border-green-300" : "bg-red-50 border-red-300") p-3 md:p-4 rounded-lg border-2 mt-2">
+                                <div class="flex justify-between text-lg md:text-xl font-bold">
+                                    <span class="text-gray-800 leading-tight">TOTAL LIABILITIES & EQUITY</span>
+                                    <span class="@(balanceSheet.IsBalanced ? "text-green-600" : "text-red-600") text-right ml-2">
                                         Rs. @balanceSheet.TotalLiabilitiesAndEquity.ToString("N2")
                                     </span>
                                 </div>

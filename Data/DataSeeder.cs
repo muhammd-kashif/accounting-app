@@ -12,6 +12,23 @@ namespace AccountingApp.Data
 
             // 1. Clear existing generic inventory/purchase data
             // We need to clear child tables first to avoid FK errors
+            if (context.SaleItems.Any())
+            {
+                context.SaleItems.RemoveRange(context.SaleItems);
+            }
+             if (context.Sales.Any())
+            {
+                context.Sales.RemoveRange(context.Sales);
+            }
+            if (context.Expenses.Any())
+            {
+                context.Expenses.RemoveRange(context.Expenses);
+            }
+             if (context.Incomes.Any())
+            {
+                context.Incomes.RemoveRange(context.Incomes);
+            }
+
             if (context.PurchaseItems.Any())
             {
                 context.PurchaseItems.RemoveRange(context.PurchaseItems);

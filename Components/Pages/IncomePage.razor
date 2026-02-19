@@ -80,10 +80,10 @@
     </div>
 
     @* Charts Section *@
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <!-- Daily Income Trend Chart -->
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <div class="flex justify-between items-center mb-4">
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+            <div class="flex justify-between items-center mb-2">
                 <div class="flex items-center gap-3">
                     <h3 class="text-lg font-bold text-gray-700">📈 Income Trend</h3>
                     @if (showComparison && (CurrentPeriodData.Any() && PreviousPeriodData.Any()))
@@ -102,12 +102,13 @@
             </div>
             
             <!-- Chart Area with extra padding for rotated labels -->
-            <div class="h-[350px] md:h-[450px] pb-12 mb-4">
+            <div class="h-[250px] pb-2 mb-0">
                  @if (CurrentPeriodData.Any())
                 {
                  <ApexChart @ref="incomeChart" @key="@($"{chartView}-{chartType}")" 
                            TItem="ChartDataPoint"
                            Title=""
+                           Height="250"
                            Options="commonOptions"
                            OnDataPointSelection="OnChartClick">
                     <ApexPointSeries TItem="ChartDataPoint"
@@ -145,7 +146,7 @@
             </div>
             
             <!-- Chart Controls -->
-            <div class="flex flex-wrap justify-between items-center gap-6 mt-8 pt-6 border-t border-gray-100">
+            <div class="flex flex-wrap justify-between items-center gap-3 mt-4 pt-3 border-t border-gray-100">
                 <!-- Chart Type Selector -->
                 <div class="flex items-center gap-2">
                     <span class="text-sm font-medium text-gray-600">Chart Type:</span>
@@ -166,66 +167,61 @@
                 </div>
                 
                 <!-- Data Labels Toggle -->
-                <label class="flex items-center gap-1 cursor-pointer">
+                <label class="flex items-flex-start gap-1 cursor-pointer">
                     <input type="checkbox" @bind="showDataLabels" @bind:after="UpdateChartExplicit" class="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500" />
-                    <span class="text-sm font-normal text-gray-600">Show Values</span>
+                    <span class="text-sm font-normal text-gray-500">Show Values</span>
                 </label>
 
                 <!-- Trend Line Toggle -->
-                <label class="flex items-center gap-1 cursor-pointer">
+                <label class="flex items-flex-start gap-1 cursor-pointer">
                     <input type="checkbox" @bind="showTrendLine" @bind:after="UpdateChartExplicit" class="w-4 h-4 text-orange-400 rounded focus:ring-2 focus:ring-orange-500" />
-                    <span class="text-sm font-medium text-gray-600">Show Trend</span>
+                    <span class="text-sm font-normal text-gray-500">Show Trend</span>
                 </label>
-
-                <!-- Export Button -->
-                <!-- <button @onclick="ExportChartAsImage" class="flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200 rounded-lg text-xs font-bold transition-all ml-auto">
-                    📸 Export
-                </button> -->
             </div>
             
             <!-- KPI Summary Panel -->
             @if (CurrentPeriodData.Any())
             {
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10 pt-8 border-t border-gray-100">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-100">
                     <!-- Average Income -->
-                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl">
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-3 rounded-xl">
                         <div class="flex items-center gap-2 mb-1">
                             <span class="text-2xl">📊</span>
-                            <span class="text-xs font-medium text-blue-700">Average</span>
+                            <span class="text-xs font-small text-blue-700">Average</span>
                         </div>
-                        <div class="text-lg font-bold text-blue-900">Rs. @AverageIncome.ToString("N0")</div>
+                        <div class="text-lg font-bold text-blue-750">Rs. @AverageIncome.ToString("N0")</div>
                         <div class="text-xs text-blue-600">per @(chartView == "daily" ? "day" : chartView == "weekly" ? "week" : chartView == "monthly" ? "month" : "year")</div>
                     </div>
                     
                     <!-- Growth Rate -->
-                    <div class="bg-gradient-to-br from-@(isPositiveGrowth ? "green" : "red")-50 to-@(isPositiveGrowth ? "green" : "red")-100 p-4 rounded-xl">
+                    <div class="bg-gradient-to-br from-@(isPositiveGrowth ? "green" : "red")-50 to-@(isPositiveGrowth ? "green" : "red")-100 p-3 rounded-xl">
                         <div class="flex items-center gap-2 mb-1">
                             <span class="text-2xl">@(isPositiveGrowth ? "📈" : "📉")</span>
-                            <span class="text-xs font-medium text-@(isPositiveGrowth ? "green" : "red")-700">Growth</span>
+                            <span class="text-xs font-small text-@(isPositiveGrowth ? "green" : "red")-700">Growth</span>
                         </div>
-                        <div class="text-lg font-bold text-@(isPositiveGrowth ? "green" : "red")-900">
+                        <div class="text-lg font-bold text-@(isPositiveGrowth ? "green" : "red")-750">
                             @(isPositiveGrowth ? "↑" : "↓") @Math.Abs(growthPercentage).ToString("F1")%
                         </div>
                         <div class="text-xs text-@(isPositiveGrowth ? "green" : "red")-600">vs previous period</div>
                     </div>
                     
                     <!-- Best Period -->
-                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl">
+                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-3 rounded-xl">
                         <div class="flex items-center gap-2 mb-1">
                             <span class="text-2xl">🏆</span>
-                            <span class="text-xs font-medium text-purple-700">Best Period</span>
+                            <span class="text-xs font-small text-purple-700">Best Period</span>
                         </div>
-                        <div class="text-lg font-bold text-purple-900 truncate">@BestPeriod</div>
+                        <div class="text-lg font-bold text-purple-750 truncate">@BestPeriod</div>
                         <div class="text-xs text-purple-600">Rs. @BestPeriodAmount.ToString("N0")</div>
                     </div>
                     
                     <!-- Total Income -->
-                    <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl">
+                    <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-3 rounded-xl">
                         <div class="flex items-center gap-2 mb-1">
                             <span class="text-2xl">💰</span>
-                            <span class="text-xs font-medium text-orange-700">Total</span>
+                            <span class="text-xs font-small text-orange-700">Total</span>
                         </div>
-                        <div class="text-lg font-bold text-orange-900">Rs. @TotalPeriodIncome.ToString("N0")</div>
+                        <div class="text-lg font-bold text-orange-750">Rs. @TotalPeriodIncome.ToString("N0")</div>
                         <div class="text-xs text-orange-600">this @chartView</div>
                     </div>
                 </div>
@@ -233,12 +229,14 @@
         </div>
 
         <!-- Payment Mode Distribution -->
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <h3 class="text-lg font-bold text-gray-700 mb-4">💳 Payment Mode Distribution</h3>
+        <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-700 mb-2">💳 Payment Mode Distribution</h3>
              @if (PaymentModeData.Any())
             {
+                <div class="h-[450px]">
                 <ApexChart TItem="PaymentModeStat"
                            Title=""
+                           Height="450"
                            Options="pieOptions">
 
                     <ApexPointSeries TItem="PaymentModeStat"
@@ -249,6 +247,7 @@
                                      YValue="@(e => e.Amount)"
                                      OrderByDescending="e => e.Y"/>
                 </ApexChart>
+                </div>
             }
              else
             {
@@ -273,7 +272,6 @@
         </div>
 
         <div class="flex flex-wrap gap-4 items-end">
-            @* <div class="flex gap-4 mb-4 flex-wrap"> *@
     <!-- Search box -->
     <div class="flex-1 min-w-[250px]">
         <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Search Customer / Description</label>
@@ -328,11 +326,8 @@
                 📄 PDF
             </button>
     </div>
-
-
-       
     </div>
-        </div>
+    </div>
 
     <!-- Add/Edit Modal -->
     @if (showForm)
@@ -343,8 +338,6 @@
                     <h2 class="text-2xl font-semibold">@(isEditing ? "Edit Income" : "Add New Income")</h2>
                     <button @onclick="CancelForm" class="text-gray-500 hover:text-gray-700 text-xl">✖</button>
                 </div>
-
-
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <input type="date" @bind="newIncome.Date" class="md:col-span-2 px-4 py-2 border rounded-lg">
@@ -537,8 +530,6 @@
                 (string.IsNullOrWhiteSpace(paymentFilter) || s.PaymentType == paymentFilter)
             );
 
-            // Payment Status Filter
-
             // Sorting
             query = selectedSort switch
             {
@@ -611,8 +602,6 @@
     private async Task LoadData()
     {
         incomes = await IncomeService.GetAllAsync(currentUserId);
-        Console.WriteLine(currentUserId);
-
         customers = await CustomerService.GetAllAsync(currentUserId);
     }
 
@@ -898,8 +887,8 @@
         { 
             Bar = new PlotOptionsBar 
             { 
-                ColumnWidth = showComparison ? "45%" : "60%", 
-                BorderRadius = 4,
+                ColumnWidth = showComparison ? "60%" : "50%", 
+                BorderRadius = 2,
                 DataLabels = new PlotOptionsBarDataLabels
                 {
                     Position = BarDataLabelPosition.Top,
