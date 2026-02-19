@@ -10,55 +10,14 @@ namespace AccountingApp.Data
             using var scope = serviceProvider.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-            // 1. Clear existing generic inventory/purchase data
-            // We need to clear child tables first to avoid FK errors
-            if (context.SaleItems.Any())
+            // Only seed if no users exist (assuming UserId 1 is the main user)
+            if (await context.Users.AnyAsync())
             {
-                context.SaleItems.RemoveRange(context.SaleItems);
-            }
-             if (context.Sales.Any())
-            {
-                context.Sales.RemoveRange(context.Sales);
-            }
-            if (context.Expenses.Any())
-            {
-                context.Expenses.RemoveRange(context.Expenses);
-            }
-             if (context.Incomes.Any())
-            {
-                context.Incomes.RemoveRange(context.Incomes);
+                return;
             }
 
-            if (context.PurchaseItems.Any())
-            {
-                context.PurchaseItems.RemoveRange(context.PurchaseItems);
-            }
-            if (context.BillItems.Any())
-            {
-                context.BillItems.RemoveRange(context.BillItems);
-            }
-            if (context.Purchases.Any())
-            {
-                context.Purchases.RemoveRange(context.Purchases);
-            }
-             if (context.Bills.Any())
-            {
-                context.Bills.RemoveRange(context.Bills);
-            }
-
-            await context.SaveChangesAsync();
-
-            // 2. Clear Suppliers & Products
-            if (context.Suppliers.Any())
-            {
-                context.Suppliers.RemoveRange(context.Suppliers);
-            }
-            if (context.Products.Any())
-            {
-                context.Products.RemoveRange(context.Products);
-            }
-            await context.SaveChangesAsync();
-
+            // Remove all context.RemoveRange calls to preserve existing data
+            
             // 3. Seed Suppliers
             var suppliers = new List<Supplier>
             {

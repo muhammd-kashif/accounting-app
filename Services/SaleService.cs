@@ -138,10 +138,18 @@ namespace AccountingApp.Services
                 
             if (existing == null) return;
 
-            // Update sale header
+            // Update Sale Header
             existing.SaleDate = sale.SaleDate;
-            existing.PaymentType = "Split"; // Set to Split if multiple, or keep for compatibility
-            existing.TotalAmount = sale.TotalAmount; // Should be recalculated in UI or here
+            
+            // Determine Payment Type
+            if (payments.Count == 1)
+                existing.PaymentType = payments[0].PaymentMethod;
+            else if (payments.Count > 1)
+                existing.PaymentType = "Split";
+            else
+                existing.PaymentType = "Unpaid";
+
+            existing.TotalAmount = sale.TotalAmount; 
             existing.PaidAmount = payments.Sum(p => p.Amount);
             existing.RemainingAmount = existing.TotalAmount - existing.PaidAmount;
             existing.IsPaid = existing.RemainingAmount <= 0;
